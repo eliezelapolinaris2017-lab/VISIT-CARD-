@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Oasis Visit Card</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Oasis One</p>
+      <h1>Visit Card</h1>
+    </div>
+    <div class="auth-box">
+      <span id="userLabel">Sin conexión</span>
+      <button id="loginBtn" class="btn primary">Entrar</button>
+      <button id="logoutBtn" class="btn ghost hidden">Salir</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section id="lockedView" class="hero card">
+      <div>
+        <p class="eyebrow">Expediente visual premium</p>
+        <h2>Servicios documentados. Historial limpio. PDF profesional.</h2>
+        <p class="muted">Conecta con Google para guardar clientes, equipos, visitas, fotos y generar una tarjeta digital lista para enviar.</p>
+      </div>
+      <button id="heroLoginBtn" class="btn primary big">Conectar con Google</button>
+    </section>
+
+    <section id="appView" class="hidden grid-layout">
+      <aside class="panel card">
+        <button class="nav active" data-view="newVisit">Nueva visita</button>
+        <button class="nav" data-view="history">Historial</button>
+        <button class="nav" data-view="settings">Configuración</button>
+      </aside>
+
+      <section id="newVisit" class="view card">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Workflow técnico</p>
+            <h2>Nueva Visit Card</h2>
+          </div>
+          <button id="resetBtn" class="btn ghost">Limpiar</button>
+        </div>
+
+        <form id="visitForm" class="form-grid">
+          <div class="block full"><h3>Cliente</h3></div>
+          <label>Nombre<input name="clientName" required placeholder="Nombre completo" /></label>
+          <label>Teléfono<input name="phone" placeholder="787-000-0000" /></label>
+          <label class="full">Dirección<input name="address" placeholder="Dirección del servicio" /></label>
+
+          <div class="block full"><h3>Equipo</h3></div>
+          <label>Marca<input name="brand" placeholder="Midea, Gree, TGM..." /></label>
+          <label>Modelo<input name="model" placeholder="Modelo" /></label>
+          <label>BTU<input name="btu" placeholder="18,000 BTU" /></label>
+          <label>Serial<input name="serial" placeholder="Serial del equipo" /></label>
+
+          <div class="block full"><h3>Servicio</h3></div>
+          <label>Tipo de servicio
+            <select name="serviceType">
+              <option>Preventivo</option>
+              <option>Profundo</option>
+              <option>Diagnóstico</option>
+              <option>Reparación</option>
+              <option>Instalación</option>
+            </select>
+          </label>
+          <label>Técnico<input name="technician" placeholder="Nombre del técnico" /></label>
+          <label>Próxima visita<input name="nextVisit" type="date" /></label>
+          <label>Garantía<input name="warranty" placeholder="Ej. 30 días en labor" /></label>
+
+          <div class="block full"><h3>Estado del sistema</h3></div>
+          <label>Enfriamiento <input name="cooling" type="range" min="0" max="100" value="85" /></label>
+          <label>Presión <input name="pressure" type="range" min="0" max="100" value="85" /></label>
+          <label>Drenaje <input name="drain" type="range" min="0" max="100" value="85" /></label>
+          <label>Evaporador <input name="evaporator" type="range" min="0" max="100" value="85" /></label>
+          <label>Condensador <input name="condenser" type="range" min="0" max="100" value="85" /></label>
+          <div class="score-card">
+            <span>Health Score</span>
+            <strong id="scoreValue">85</strong>
+            <small id="scoreText">Excelente</small>
+          </div>
+
+          <div class="block full"><h3>Evidencia</h3></div>
+          <label>Fotos antes<input id="beforePhotos" type="file" accept="image/*" multiple /></label>
+          <label>Fotos después<input id="afterPhotos" type="file" accept="image/*" multiple /></label>
+
+          <label class="full">Observaciones técnicas<textarea name="notes" rows="5" placeholder="Trabajo realizado, hallazgos, recomendaciones..."></textarea></label>
+          <label class="full">Recomendación al cliente<textarea name="recommendation" rows="3" placeholder="Próximo mantenimiento, reparación sugerida, piezas... "></textarea></label>
+
+          <div class="actions full">
+            <button class="btn primary" type="submit">Guardar Visit Card</button>
+            <button id="pdfBtn" class="btn secondary" type="button" disabled>Generar PDF</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="history" class="view card hidden">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Base operacional</p>
+            <h2>Historial</h2>
+          </div>
+          <input id="searchInput" class="search" placeholder="Buscar cliente, marca, serial..." />
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+
+      <section id="settings" class="view card hidden">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Branding</p>
+            <h2>Configuración</h2>
+          </div>
+        </div>
+        <form id="settingsForm" class="form-grid">
+          <label>Nombre del negocio<input name="businessName" value="Oasis Air Cleaner Services LLC" /></label>
+          <label>Teléfono<input name="businessPhone" value="787-664-3079" /></label>
+          <label>Email<input name="businessEmail" placeholder="email@negocio.com" /></label>
+          <label class="full">Dirección<input name="businessAddress" placeholder="Dirección del negocio" /></label>
+          <label>Logo<input id="logoFile" type="file" accept="image/*" /></label>
+          <div class="actions"><button class="btn primary" type="submit">Guardar</button></div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <div id="qrHolder" class="hidden"></div>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
