@@ -1,45 +1,68 @@
 # Oasis Visit Card
 
-App web estática para GitHub Pages con Firebase Auth, Firestore, Storage, generación de PDF y QR.
+Proyecto listo para GitHub Pages con Firebase Auth, Firestore y Storage.
 
 ## Archivos
-- `index.html`
-- `styles.css`
-- `app.js`
-- `firebase-config.example.js`
+- index.html
+- styles.css
+- app.js
+- manifest.json
 
-## Instalación
-1. Crea un proyecto en Firebase.
-2. Activa Authentication > Google.
-3. Activa Firestore Database.
-4. Activa Storage.
-5. Copia `firebase-config.example.js` y renómbralo a `firebase-config.js`.
-6. Pega tu configuración real de Firebase.
-7. Sube todos los archivos a GitHub Pages.
+## Firebase ya integrado
+Proyecto:
+oasis-visit-card
 
-## Reglas Firestore sugeridas
+## Activar en Firebase
+1. Authentication > Sign-in method > Google > Enable
+2. Firestore Database > Create Database
+3. Storage > Get Started
+4. Authentication > Settings > Authorized domains
+   - añade tu dominio GitHub Pages: tuusuario.github.io
+   - añade tu dominio propio si aplica
+
+## Reglas Firestore
+
 ```js
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /{document=**} {
-      allow read, write: if false;
+      allow read, write:
+      if request.auth != null
+      && request.auth.uid == userId;
     }
   }
 }
 ```
 
-## Reglas Storage sugeridas
+## Reglas Storage
+
 ```js
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
     match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write:
+      if request.auth != null
+      && request.auth.uid == userId;
     }
   }
 }
 ```
+
+## GitHub Pages
+1. Sube los archivos al root del repositorio.
+2. Settings > Pages.
+3. Source: main.
+4. Folder: /root.
+5. Abre el enlace publicado.
+
+## Prueba
+1. Entrar con Google.
+2. Configurar negocio.
+3. Crear visita.
+4. Subir fotos.
+5. Guardar.
+6. Generar PDF o QR.

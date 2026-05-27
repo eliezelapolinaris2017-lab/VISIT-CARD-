@@ -1,143 +1,133 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Oasis Visit Card</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#05070b" />
 </head>
 <body>
-  <div class="bg-orb orb-a"></div>
-  <div class="bg-orb orb-b"></div>
-
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">Oasis One</p>
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand-mark">OASIS</div>
       <h1>Visit Card</h1>
+      <p>Expediente visual de servicio</p>
+      <button id="loginBtn" class="primary-btn">Entrar con Google</button>
     </div>
-    <div class="auth-box">
-      <span id="userLabel">Sin conexión</span>
-      <button id="loginBtn" class="btn primary">Entrar</button>
-      <button id="logoutBtn" class="btn ghost hidden">Salir</button>
-    </div>
-  </header>
+  </div>
 
-  <main class="shell">
-    <section id="lockedView" class="hero card">
+  <main id="app" class="app hidden">
+    <header class="topbar">
       <div>
-        <p class="eyebrow">Expediente visual premium</p>
-        <h2>Servicios documentados. Historial limpio. PDF profesional.</h2>
-        <p class="muted">Conecta con Google para guardar clientes, equipos, visitas, fotos y generar una tarjeta digital lista para enviar.</p>
+        <span class="eyebrow">Oasis One</span>
+        <h1>Visit Card</h1>
       </div>
-      <button id="heroLoginBtn" class="btn primary big">Conectar con Google</button>
+      <div class="top-actions">
+        <button id="settingsBtn" class="ghost-btn">Config</button>
+        <button id="logoutBtn" class="ghost-btn">Salir</button>
+      </div>
+    </header>
+
+    <section class="kpi-grid">
+      <article class="kpi-card">
+        <span>Visitas</span>
+        <strong id="kpiVisits">0</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Clientes</span>
+        <strong id="kpiClients">0</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Promedio Health</span>
+        <strong id="kpiHealth">—</strong>
+      </article>
     </section>
 
-    <section id="appView" class="hidden grid-layout">
-      <aside class="panel card">
-        <button class="nav active" data-view="newVisit">Nueva visita</button>
-        <button class="nav" data-view="history">Historial</button>
-        <button class="nav" data-view="settings">Configuración</button>
-      </aside>
+    <nav class="tabs">
+      <button class="tab active" data-tab="newVisit">Nueva Visita</button>
+      <button class="tab" data-tab="history">Historial</button>
+      <button class="tab" data-tab="clients">Clientes</button>
+    </nav>
 
-      <section id="newVisit" class="view card">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Workflow técnico</p>
-            <h2>Nueva Visit Card</h2>
-          </div>
-          <button id="resetBtn" class="btn ghost">Limpiar</button>
+    <section id="newVisit" class="panel active">
+      <form id="visitForm" class="form-grid">
+        <div class="section-title">Cliente</div>
+        <input name="clientName" placeholder="Nombre del cliente" required />
+        <input name="clientPhone" placeholder="Teléfono / WhatsApp" />
+        <input name="clientAddress" placeholder="Dirección" />
+
+        <div class="section-title">Equipo</div>
+        <input name="brand" placeholder="Marca" />
+        <input name="model" placeholder="Modelo" />
+        <input name="btu" placeholder="BTU" />
+        <input name="serial" placeholder="Serial" />
+
+        <div class="section-title">Servicio</div>
+        <select name="serviceType">
+          <option>Mantenimiento Preventivo</option>
+          <option>Mantenimiento Profundo</option>
+          <option>Diagnóstico</option>
+          <option>Reparación</option>
+          <option>Instalación</option>
+        </select>
+        <input name="technician" placeholder="Técnico" />
+        <input name="nextVisit" type="date" />
+
+        <div class="section-title">Estado del sistema</div>
+        <label>Enfriamiento <input name="cooling" type="range" min="0" max="100" value="85" /></label>
+        <label>Presión <input name="pressure" type="range" min="0" max="100" value="85" /></label>
+        <label>Drenaje <input name="drain" type="range" min="0" max="100" value="85" /></label>
+        <label>Evaporador <input name="evaporator" type="range" min="0" max="100" value="85" /></label>
+        <label>Condensador <input name="condenser" type="range" min="0" max="100" value="85" /></label>
+
+        <div class="score-preview">
+          <span>Health Score</span>
+          <strong id="healthPreview">85</strong>
         </div>
 
-        <form id="visitForm" class="form-grid">
-          <div class="block full"><h3>Cliente</h3></div>
-          <label>Nombre<input name="clientName" required placeholder="Nombre completo" /></label>
-          <label>Teléfono<input name="phone" placeholder="787-000-0000" /></label>
-          <label class="full">Dirección<input name="address" placeholder="Dirección del servicio" /></label>
+        <div class="section-title">Evidencia</div>
+        <label class="file-box">Fotos antes <input id="beforePhotos" type="file" accept="image/*" multiple /></label>
+        <label class="file-box">Fotos después <input id="afterPhotos" type="file" accept="image/*" multiple /></label>
 
-          <div class="block full"><h3>Equipo</h3></div>
-          <label>Marca<input name="brand" placeholder="Midea, Gree, TGM..." /></label>
-          <label>Modelo<input name="model" placeholder="Modelo" /></label>
-          <label>BTU<input name="btu" placeholder="18,000 BTU" /></label>
-          <label>Serial<input name="serial" placeholder="Serial del equipo" /></label>
+        <div class="section-title">Observaciones</div>
+        <textarea name="notes" placeholder="Observaciones técnicas"></textarea>
+        <textarea name="recommendations" placeholder="Recomendaciones"></textarea>
 
-          <div class="block full"><h3>Servicio</h3></div>
-          <label>Tipo de servicio
-            <select name="serviceType">
-              <option>Preventivo</option>
-              <option>Profundo</option>
-              <option>Diagnóstico</option>
-              <option>Reparación</option>
-              <option>Instalación</option>
-            </select>
-          </label>
-          <label>Técnico<input name="technician" placeholder="Nombre del técnico" /></label>
-          <label>Próxima visita<input name="nextVisit" type="date" /></label>
-          <label>Garantía<input name="warranty" placeholder="Ej. 30 días en labor" /></label>
+        <button class="primary-btn full" type="submit">Guardar visita</button>
+      </form>
+    </section>
 
-          <div class="block full"><h3>Estado del sistema</h3></div>
-          <label>Enfriamiento <input name="cooling" type="range" min="0" max="100" value="85" /></label>
-          <label>Presión <input name="pressure" type="range" min="0" max="100" value="85" /></label>
-          <label>Drenaje <input name="drain" type="range" min="0" max="100" value="85" /></label>
-          <label>Evaporador <input name="evaporator" type="range" min="0" max="100" value="85" /></label>
-          <label>Condensador <input name="condenser" type="range" min="0" max="100" value="85" /></label>
-          <div class="score-card">
-            <span>Health Score</span>
-            <strong id="scoreValue">85</strong>
-            <small id="scoreText">Excelente</small>
-          </div>
+    <section id="history" class="panel">
+      <div class="toolbar">
+        <input id="searchInput" placeholder="Buscar cliente, marca, serial..." />
+      </div>
+      <div id="visitList" class="cards"></div>
+    </section>
 
-          <div class="block full"><h3>Evidencia</h3></div>
-          <label>Fotos antes<input id="beforePhotos" type="file" accept="image/*" multiple /></label>
-          <label>Fotos después<input id="afterPhotos" type="file" accept="image/*" multiple /></label>
-
-          <label class="full">Observaciones técnicas<textarea name="notes" rows="5" placeholder="Trabajo realizado, hallazgos, recomendaciones..."></textarea></label>
-          <label class="full">Recomendación al cliente<textarea name="recommendation" rows="3" placeholder="Próximo mantenimiento, reparación sugerida, piezas... "></textarea></label>
-
-          <div class="actions full">
-            <button class="btn primary" type="submit">Guardar Visit Card</button>
-            <button id="pdfBtn" class="btn secondary" type="button" disabled>Generar PDF</button>
-          </div>
-        </form>
-      </section>
-
-      <section id="history" class="view card hidden">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Base operacional</p>
-            <h2>Historial</h2>
-          </div>
-          <input id="searchInput" class="search" placeholder="Buscar cliente, marca, serial..." />
-        </div>
-        <div id="historyList" class="history-list"></div>
-      </section>
-
-      <section id="settings" class="view card hidden">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Branding</p>
-            <h2>Configuración</h2>
-          </div>
-        </div>
-        <form id="settingsForm" class="form-grid">
-          <label>Nombre del negocio<input name="businessName" value="Oasis Air Cleaner Services LLC" /></label>
-          <label>Teléfono<input name="businessPhone" value="787-664-3079" /></label>
-          <label>Email<input name="businessEmail" placeholder="email@negocio.com" /></label>
-          <label class="full">Dirección<input name="businessAddress" placeholder="Dirección del negocio" /></label>
-          <label>Logo<input id="logoFile" type="file" accept="image/*" /></label>
-          <div class="actions"><button class="btn primary" type="submit">Guardar</button></div>
-        </form>
-      </section>
+    <section id="clients" class="panel">
+      <div id="clientList" class="cards"></div>
     </section>
   </main>
 
-  <div id="qrHolder" class="hidden"></div>
-  <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
+  <dialog id="settingsDialog" class="dialog">
+    <form id="settingsForm">
+      <h2>Configuración</h2>
+      <input name="businessName" placeholder="Nombre del negocio" />
+      <input name="businessPhone" placeholder="Teléfono" />
+      <input name="businessEmail" placeholder="Email" />
+      <input name="businessAddress" placeholder="Dirección" />
+      <label class="file-box">Logo <input id="logoFile" type="file" accept="image/*" /></label>
+      <div class="dialog-actions">
+        <button type="button" id="closeSettings" class="ghost-btn">Cerrar</button>
+        <button class="primary-btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

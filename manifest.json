@@ -1,0 +1,9 @@
+{
+  "name": "Oasis Visit Card",
+  "short_name": "Visit Card",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#05070b",
+  "theme_color": "#05070b",
+  "icons": []
+}
