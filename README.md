@@ -1,20 +1,14 @@
-# Oasis Visit Card Pro Admin
+# Oasis Visit Card — Expediente de Cliente
 
 Mejoras:
-- Editar visitas.
-- Borrar visitas.
-- Ver detalle completo.
-- PDF real descargable/compartible.
-- PDF visual más premium.
-- Próxima visita automática a 6 meses con opciones editables.
-- Historial más operativo.
+- Clientes agrupados correctamente.
+- Una tarjeta por cliente.
+- Ver historial completo por cliente.
+- Descargar/compartir PDF de expediente de cliente.
+- Mantiene edición, borrado, QR, WhatsApp y PDF por visita.
 
 Sube al root del repo:
 - index.html
 - styles.css
 - app.js
 - manifest.json
-
-Después:
-- Recarga fuerte.
-- En iPhone/iPad, si ves versión vieja, borra caché o abre en ventana privada.

@@ -267,37 +267,72 @@ function renderVisits(visits){
   });
 }
 
+function clientKey(v){
+  const phone = (v.clientPhone || "").replace(/\D/g, "");
+  if (phone) return `phone:${phone}`;
+  return `name:${String(v.clientName || "").trim().toLowerCase()}|addr:${String(v.clientAddress || "").trim().toLowerCase()}`;
+}
+
 function renderClients(visits){
   const map = new Map();
+
   visits.forEach(v => {
-    const key = (v.clientPhone || v.clientName || "").trim();
-    if (!key) return;
+    const key = clientKey(v);
+    if (!key || key === "name:|addr:") return;
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(v);
   });
 
+  const groups = Array.from(map.entries()).map(([key, items]) => {
+    return { key, items, latest: items[0] };
+  }).sort((a,b) => String(a.latest.clientName || "").localeCompare(String(b.latest.clientName || "")));
+
   const list = $("clientList");
   list.innerHTML = "";
-  if (!map.size) {
+
+  if (!groups.length) {
     list.innerHTML = `<div class="visit-card"><h3>Sin clientes</h3><p>Los clientes aparecerán aquí automáticamente.</p></div>`;
     return;
   }
 
-  map.forEach((items) => {
-    const latest = items[0];
+  groups.forEach(group => {
+    const items = group.items;
+    const latest = group.latest;
     const avg = Math.round(items.reduce((s,v)=>s+Number(v.healthScore||0),0)/items.length);
     const status = statusFromScore(avg);
+    const nextDates = items.map(v => v.nextVisit).filter(Boolean).sort();
+    const next = nextDates[0] || latest.nextVisit || "Por coordinar";
+
     const card = document.createElement("article");
-    card.className = "visit-card";
+    card.className = "visit-card client-master-card";
     card.innerHTML = `
       <h3>${cleanText(latest.clientName || "Cliente")}</h3>
       <p>${cleanText(latest.clientPhone || "")}</p>
-      <p>${items.length} visita(s)</p>
-      <p>Próxima: ${cleanText(latest.nextVisit || "Por coordinar")}</p>
-      <span class="badge ${status.cls}">${avg} · ${status.label}</span>`;
+      <p>${cleanText(latest.clientAddress || "")}</p>
+      <p>${items.length} visita(s) registradas</p>
+      <p>Próxima: ${cleanText(next)}</p>
+      <span class="badge ${status.cls}">${avg} · ${status.label}</span>
+      <div class="card-actions">
+        <button type="button" class="small-btn" data-client-action="history" data-key="${cleanText(group.key)}">Ver historial</button>
+        <button type="button" class="small-btn" data-client-action="pdf-history" data-key="${cleanText(group.key)}">PDF expediente</button>
+      </div>
+    `;
     list.appendChild(card);
   });
 }
+
+$("clientList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-client-action]");
+  if (!btn) return;
+
+  const key = btn.dataset.key;
+  const visits = visitsCache.filter(v => clientKey(v) === key);
+
+  if (!visits.length) return alert("No se encontró historial para este cliente.");
+
+  if (btn.dataset.clientAction === "history") openClientHistory(visits);
+  if (btn.dataset.clientAction === "pdf-history") await generateClientHistoryPDF(visits);
+});
 
 $("visitList").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-action]");
@@ -343,6 +378,191 @@ $("settingsForm").addEventListener("submit", async (e) => {
     alert("Error guardando configuración: " + err.message);
   }
 });
+
+
+
+function openClientHistory(visits){
+  const latest = visits[0];
+  const avg = Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length);
+  const status = statusFromScore(avg);
+
+  $("detailContent").innerHTML = `
+    <h2>Expediente de cliente</h2>
+    <p class="muted">${cleanText(latest.clientName || "Cliente")} · ${cleanText(latest.clientPhone || "")}</p>
+    <span class="badge ${status.cls}">${avg} · Promedio Health</span>
+    <div class="detail-grid">
+      <div class="detail-box"><h3>Cliente</h3><p>${cleanText(latest.clientName || "—")}</p><p>${cleanText(latest.clientPhone || "—")}</p><p>${cleanText(latest.clientAddress || "—")}</p></div>
+      <div class="detail-box"><h3>Resumen</h3><p>${visits.length} visita(s)</p><p>Última visita: ${cleanText(latest.createdAtText || "—")}</p><p>Próxima: ${cleanText(latest.nextVisit || "Por coordinar")}</p></div>
+    </div>
+    <h3>Historial de visitas</h3>
+    <div class="history-timeline">
+      ${visits.map(v => {
+        const s = statusFromScore(v.healthScore);
+        return `
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <h4>${cleanText(v.createdAtText || "Sin fecha")} · ${cleanText(v.serviceType || "Servicio")}</h4>
+              <p>${cleanText([v.brand, v.model, v.btu, v.serial].filter(Boolean).join(" · "))}</p>
+              <p>Health: <b>${Number(v.healthScore || 0)}/100</b> · ${s.label}</p>
+              <p>Próxima visita: ${cleanText(v.nextVisit || "Por coordinar")}</p>
+              ${v.notes ? `<p><b>Obs:</b> ${cleanText(v.notes)}</p>` : ""}
+              ${v.recommendations ? `<p><b>Rec:</b> ${cleanText(v.recommendations)}</p>` : ""}
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+  $("detailDialog").showModal();
+}
+
+async function generateClientHistoryPDF(visits){
+  if (!visits || !visits.length) return;
+
+  try {
+    const latest = visits[0];
+    const avg = Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length);
+    const status = statusFromScore(avg);
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+    const W = pdf.internal.pageSize.getWidth();
+    const H = pdf.internal.pageSize.getHeight();
+    const m = 42;
+
+    function header(title = "Expediente de Cliente"){
+      pdf.setFillColor(245,247,251);
+      pdf.rect(0,0,W,H,"F");
+      pdf.setFillColor(7,12,24);
+      pdf.roundedRect(28,28,W-56,H-56,24,24,"F");
+      pdf.setFillColor(12,24,45);
+      pdf.roundedRect(m-6,m-6,W-(m*2)+12,H-(m*2)+12,18,18,"F");
+
+      pdf.setTextColor(216,180,90);
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(9);
+      pdf.text((settings.businessName || "Oasis Air Cleaner Services LLC").toUpperCase(), m, 58);
+
+      pdf.setTextColor(255,255,255);
+      pdf.setFontSize(26);
+      pdf.text(title, m, 88);
+
+      pdf.setTextColor(210,218,230);
+      pdf.setFontSize(10);
+      pdf.text("Historial técnico acumulado", m, 108);
+    }
+
+    header();
+
+    let y = 140;
+
+    drawPdfBox(pdf, m, y, 250, 116, "CLIENTE", [
+      latest.clientName || "—",
+      latest.clientPhone || "—",
+      latest.clientAddress || "—"
+    ]);
+
+    drawPdfBox(pdf, m + 270, y, 250, 116, "RESUMEN", [
+      `${visits.length} visita(s) registradas`,
+      `Promedio Health: ${avg}/100`,
+      `Última visita: ${latest.createdAtText || "—"}`,
+      `Próxima: ${latest.nextVisit || "Por coordinar"}`
+    ]);
+
+    y += 142;
+
+    const c = hexToRgb(status.color);
+    pdf.setFillColor(c.r,c.g,c.b);
+    pdf.roundedRect(m,y,W-(m*2),58,16,16,"F");
+    pdf.setTextColor(5,7,11);
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(11);
+    pdf.text("ESTADO GENERAL DEL CLIENTE", m+20, y+35);
+    pdf.setFontSize(28);
+    pdf.text(`${avg}/100`, W-155, y+38);
+
+    y += 90;
+
+    pdf.setTextColor(216,180,90);
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(11);
+    pdf.text("HISTORIAL DE VISITAS", m, y);
+    y += 24;
+
+    for (let i = 0; i < visits.length; i++) {
+      const v = visits[i];
+      const s = statusFromScore(v.healthScore);
+
+      if (y > H - 170) {
+        pdf.addPage();
+        header("Expediente de Cliente");
+        y = 140;
+      }
+
+      pdf.setDrawColor(90,115,150);
+      pdf.setFillColor(22,38,64);
+      pdf.roundedRect(m, y, W-(m*2), 118, 14, 14, "FD");
+
+      pdf.setTextColor(216,180,90);
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(10);
+      pdf.text(`${i+1}. ${v.createdAtText || "Sin fecha"} · ${v.serviceType || "Servicio"}`, m+16, y+24);
+
+      pdf.setTextColor(245,247,251);
+      pdf.setFontSize(10);
+      pdf.text(wrap(pdf, `${v.brand || "—"} ${v.model || ""} ${v.btu || ""} · Serial: ${v.serial || "—"}`, W-(m*2)-32), m+16, y+44);
+
+      pdf.setTextColor(210,218,230);
+      pdf.text(`Health: ${Number(v.healthScore || 0)}/100 · ${s.label}`, m+16, y+64);
+      pdf.text(`Próxima visita: ${v.nextVisit || "Por coordinar"}`, m+16, y+82);
+
+      const obs = [v.notes ? `Obs: ${v.notes}` : "", v.recommendations ? `Rec: ${v.recommendations}` : ""].filter(Boolean).join("  |  ");
+      if (obs) {
+        pdf.setFontSize(8.5);
+        pdf.text(wrap(pdf, obs, W-(m*2)-32).slice(0,2), m+16, y+101);
+      }
+
+      y += 132;
+    }
+
+    pdf.setDrawColor(255,255,255);
+    pdf.setLineWidth(.3);
+    pdf.line(m,H-92,W-m,H-92);
+
+    pdf.setTextColor(210,218,230);
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(9);
+    pdf.text(settings.businessName || "Oasis Air Cleaner Services LLC", m, H-68);
+    pdf.setFont("helvetica","normal");
+    pdf.text(`${settings.businessPhone || ""} ${settings.businessEmail || ""}`, m, H-53);
+
+    const fileName = `Oasis-Expediente-${cleanFileName(latest.clientName || "cliente")}.pdf`;
+    const blob = pdf.output("blob");
+    const file = new File([blob], fileName, { type: "application/pdf" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: "Expediente de Cliente",
+        text: "Historial técnico de servicio",
+        files: [file]
+      });
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  } catch (err) {
+    console.error(err);
+    alert("No se pudo generar el expediente PDF: " + err.message);
+  }
+}
 
 
 function clearVisitForm(){
