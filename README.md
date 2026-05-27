@@ -1,18 +1,20 @@
-# Oasis Visit Card — PDF real + Share
+# Oasis Visit Card Pro Admin
 
-Corrección aplicada:
-- El botón PDF ya no depende de imprimir desde Safari.
-- Genera un archivo PDF real con jsPDF.
-- En iPhone/iPad intenta abrir el menú de compartir.
-- En navegador de escritorio descarga el .pdf.
-- QR y WhatsApp quedan activos.
+Mejoras:
+- Editar visitas.
+- Borrar visitas.
+- Ver detalle completo.
+- PDF real descargable/compartible.
+- PDF visual más premium.
+- Próxima visita automática a 6 meses con opciones editables.
+- Historial más operativo.
 
-Sube al root de GitHub:
+Sube al root del repo:
 - index.html
 - styles.css
 - app.js
 - manifest.json
 
-Después en Safari:
-- recarga fuerte
-- si sigue viejo, borra caché o abre en ventana privada
+Después:
+- Recarga fuerte.
+- En iPhone/iPad, si ves versión vieja, borra caché o abre en ventana privada.

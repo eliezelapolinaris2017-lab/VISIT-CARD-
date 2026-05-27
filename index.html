@@ -44,6 +44,7 @@
 
     <section id="newVisit" class="panel active">
       <form id="visitForm" class="form-grid">
+        <input type="hidden" name="editingId" id="editingId" />
         <div class="section-title">Cliente</div>
         <input name="clientName" placeholder="Nombre del cliente" required />
         <input name="clientPhone" placeholder="Teléfono / WhatsApp" />
@@ -94,7 +95,10 @@
         <textarea name="notes" placeholder="Observaciones técnicas"></textarea>
         <textarea name="recommendations" placeholder="Recomendaciones"></textarea>
 
-        <button class="primary-btn full" type="submit">Guardar visita</button>
+        <div class="form-actions full">
+          <button class="primary-btn" id="saveVisitBtn" type="submit">Guardar visita</button>
+          <button class="ghost-btn hidden" id="cancelEditBtn" type="button">Cancelar edición</button>
+        </div>
       </form>
     </section>
 
@@ -123,6 +127,14 @@
         <button class="primary-btn" type="submit">Guardar</button>
       </div>
     </form>
+  </dialog>
+
+
+  <dialog id="detailDialog" class="dialog detail-dialog">
+    <div id="detailContent"></div>
+    <div class="dialog-actions">
+      <button type="button" id="closeDetail" class="ghost-btn">Cerrar</button>
+    </div>
   </dialog>
 
   <script type="module" src="app.js"></script>

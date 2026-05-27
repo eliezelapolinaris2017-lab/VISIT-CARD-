@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, query, orderBy, serverTimestamp, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 
@@ -181,13 +181,18 @@ $("visitForm").addEventListener("submit", async (e) => {
       createdAtText: new Date().toLocaleDateString("es-PR")
     };
 
-    await addDoc(collection(db, "users", currentUser.uid, "visits"), data);
-    e.target.reset();
-    $("visitInterval").value = "6";
-    setupNextVisitAutomation();
-    updateHealthPreview();
-    $("beforePhotos").value = "";
-    $("afterPhotos").value = "";
+    const editingId = $("editingId")?.value || "";
+    if (editingId) {
+      const original = visitsCache.find(x => x.id === editingId) || {};
+      data.beforeUrls = beforeUrls.length ? beforeUrls : (original.beforeUrls || []);
+      data.afterUrls = afterUrls.length ? afterUrls : (original.afterUrls || []);
+      data.updatedAt = serverTimestamp();
+      await updateDoc(doc(db, "users", currentUser.uid, "visits", editingId), data);
+    } else {
+      await addDoc(collection(db, "users", currentUser.uid, "visits"), data);
+    }
+
+    clearVisitForm();
     await loadVisits();
     document.querySelector('[data-tab="history"]').click();
   } catch (err) {
@@ -246,10 +251,17 @@ function renderVisits(visits){
       <p>${cleanText([v.brand, v.btu, v.serial].filter(Boolean).join(" · "))}</p>
       <p>Próxima visita: ${cleanText(v.nextVisit || "Por coordinar")}</p>
       <span class="badge ${status.cls}">${Number(v.healthScore || 0)} · ${status.label}</span>
+      <div>
+        <span class="meta-pill">${cleanText(v.visitIntervalLabel || "6 meses")}</span>
+        ${v.nextVisitReason ? `<span class="meta-pill">Ajustado</span>` : ""}
+      </div>
       <div class="card-actions">
+        <button type="button" class="small-btn" data-action="view" data-id="${v.id}">Ver</button>
+        <button type="button" class="small-btn" data-action="edit" data-id="${v.id}">Editar</button>
         <button type="button" class="small-btn" data-action="pdf" data-id="${v.id}">PDF</button>
         <button type="button" class="small-btn" data-action="qr" data-id="${v.id}">QR</button>
         ${v.clientPhone ? `<button type="button" class="small-btn" data-action="wa" data-id="${v.id}">WhatsApp</button>` : ""}
+        <button type="button" class="danger-btn" data-action="delete" data-id="${v.id}">Borrar</button>
       </div>`;
     list.appendChild(card);
   });
@@ -292,6 +304,9 @@ $("visitList").addEventListener("click", (e) => {
   if (!btn) return;
   const v = visitsCache.find(item => item.id === btn.dataset.id);
   if (!v) return alert("No se encontró la visita.");
+  if (btn.dataset.action === "view") openDetail(v);
+  if (btn.dataset.action === "edit") editVisit(v);
+  if (btn.dataset.action === "delete") deleteVisit(v);
   if (btn.dataset.action === "pdf") generateRealPDF(v);
   if (btn.dataset.action === "qr") openQR(v);
   if (btn.dataset.action === "wa") sendWhatsApp(v);
@@ -328,6 +343,83 @@ $("settingsForm").addEventListener("submit", async (e) => {
     alert("Error guardando configuración: " + err.message);
   }
 });
+
+
+function clearVisitForm(){
+  const form = $("visitForm");
+  form.reset();
+  $("editingId").value = "";
+  $("saveVisitBtn").textContent = "Guardar visita";
+  $("cancelEditBtn").classList.add("hidden");
+  $("visitInterval").value = "6";
+  setupNextVisitAutomation();
+  updateHealthPreview();
+  $("beforePhotos").value = "";
+  $("afterPhotos").value = "";
+}
+
+$("cancelEditBtn").onclick = clearVisitForm;
+$("closeDetail").onclick = () => $("detailDialog").close();
+
+function editVisit(v){
+  const form = $("visitForm");
+  $("editingId").value = v.id;
+  form.clientName.value = v.clientName || "";
+  form.clientPhone.value = v.clientPhone || "";
+  form.clientAddress.value = v.clientAddress || "";
+  form.brand.value = v.brand || "";
+  form.model.value = v.model || "";
+  form.btu.value = v.btu || "";
+  form.serial.value = v.serial || "";
+  form.serviceType.value = v.serviceType || "Mantenimiento Preventivo";
+  form.technician.value = v.technician || "";
+  $("visitInterval").value = v.visitInterval || "6";
+  $("nextVisit").value = v.nextVisit || "";
+  $("nextVisitReason").value = v.nextVisitReason || "";
+  form.cooling.value = v.metrics?.cooling ?? v.healthScore ?? 85;
+  form.pressure.value = v.metrics?.pressure ?? v.healthScore ?? 85;
+  form.drain.value = v.metrics?.drain ?? v.healthScore ?? 85;
+  form.evaporator.value = v.metrics?.evaporator ?? v.healthScore ?? 85;
+  form.condenser.value = v.metrics?.condenser ?? v.healthScore ?? 85;
+  form.notes.value = v.notes || "";
+  form.recommendations.value = v.recommendations || "";
+  $("saveVisitBtn").textContent = "Actualizar visita";
+  $("cancelEditBtn").classList.remove("hidden");
+  updateHealthPreview();
+  document.querySelector('[data-tab="newVisit"]').click();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteVisit(v){
+  const ok = confirm(`¿Borrar la visita de ${v.clientName || "este cliente"}? Esta acción no se puede deshacer.`);
+  if (!ok) return;
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid, "visits", v.id));
+    await loadVisits();
+  } catch (err) {
+    alert("Error borrando visita: " + err.message);
+  }
+}
+
+function openDetail(v){
+  const status = statusFromScore(v.healthScore);
+  $("detailContent").innerHTML = `
+    <h2>${cleanText(v.clientName || "Cliente")}</h2>
+    <p class="muted">${cleanText(v.serviceType || "Servicio")} · ${cleanText(v.createdAtText || "")}</p>
+    <span class="badge ${status.cls}">${Number(v.healthScore || 0)} · ${status.label}</span>
+    <div class="detail-grid">
+      <div class="detail-box"><h3>Cliente</h3><p>${cleanText(v.clientPhone || "—")}</p><p>${cleanText(v.clientAddress || "—")}</p></div>
+      <div class="detail-box"><h3>Equipo</h3><p>${cleanText(v.brand || "—")} ${cleanText(v.btu || "")}</p><p>Modelo: ${cleanText(v.model || "—")}</p><p>Serial: ${cleanText(v.serial || "—")}</p></div>
+      <div class="detail-box"><h3>Próxima visita</h3><p>${cleanText(v.nextVisit || "Por coordinar")}</p><p>${cleanText(v.visitIntervalLabel || "Residencial estándar — 6 meses")}</p><p>${cleanText(v.nextVisitReason || "")}</p></div>
+      <div class="detail-box"><h3>Técnico</h3><p>${cleanText(v.technician || "—")}</p></div>
+      <div class="detail-box"><h3>Observaciones</h3><p>${cleanText(v.notes || "—")}</p></div>
+      <div class="detail-box"><h3>Recomendaciones</h3><p>${cleanText(v.recommendations || "—")}</p></div>
+    </div>
+    ${(v.beforeUrls?.length || v.afterUrls?.length) ? `<h3>Fotos</h3><div class="photo-grid">${[...(v.beforeUrls||[]), ...(v.afterUrls||[])].slice(0,6).map(u=>`<img src="${u}">`).join("")}</div>` : ""}
+  `;
+  $("detailDialog").showModal();
+}
+
 
 function visitPublicUrl(v){
   return `${location.origin}${location.pathname}#visit-${v.id}`;
@@ -482,11 +574,14 @@ async function generateRealPDF(v){
     const m = 42;
     const status = statusFromScore(v.healthScore || 0);
 
-    pdf.setFillColor(5, 7, 11);
+    pdf.setFillColor(245, 247, 251);
     pdf.rect(0, 0, W, H, "F");
 
-    pdf.setFillColor(13, 24, 42);
-    pdf.roundedRect(m - 10, m - 10, W - (m * 2) + 20, H - (m * 2) + 20, 18, 18, "F");
+    pdf.setFillColor(7, 12, 24);
+    pdf.roundedRect(28, 28, W - 56, H - 56, 24, 24, "F");
+
+    pdf.setFillColor(12, 24, 45);
+    pdf.roundedRect(m - 6, m - 6, W - (m * 2) + 12, H - (m * 2) + 12, 18, 18, "F");
 
     pdf.setTextColor(216, 180, 90);
     pdf.setFont("helvetica", "bold");
