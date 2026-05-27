@@ -33,6 +33,49 @@ const safe = (v) => String(v ?? "");
 const cleanText = (v) => safe(v).replace(/[<>&"']/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#039;'}[s]));
 const qrUrl = (text, size = 280) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
 
+function setupNextVisitAutomation(){
+  const interval = $("visitInterval");
+  const nextVisit = $("nextVisit");
+  const reason = $("nextVisitReason");
+  if (!interval || !nextVisit) return;
+
+  const apply = () => {
+    if (interval.value === "custom") {
+      nextVisit.disabled = false;
+      if (!nextVisit.value) nextVisit.value = formatDate(new Date());
+      if (reason) reason.placeholder = "Motivo del ajuste";
+      return;
+    }
+
+    const months = Number(interval.value || 6);
+    nextVisit.value = addMonths(new Date(), months);
+    nextVisit.disabled = false;
+
+    if (reason) {
+      reason.placeholder = months < 6
+        ? "Motivo del menor tiempo: comercial, alto uso, grasa, polvo, etc."
+        : "Motivo del ajuste, si aplica";
+    }
+  };
+
+  interval.removeEventListener("change", apply);
+  interval.addEventListener("change", apply);
+  apply();
+}
+
+function addMonths(date, months){
+  const d = new Date(date.getFullYear(), date.getMonth() + months, date.getDate());
+  return formatDate(d);
+}
+
+function formatDate(date){
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+
 $("loginBtn").onclick = async () => {
   try { await signInWithPopup(auth, provider); }
   catch (err) { alert(err.message); console.error(err); }
@@ -50,6 +93,7 @@ onAuthStateChanged(auth, async (user) => {
   $("authScreen").classList.add("hidden");
   $("app").classList.remove("hidden");
   await loadSettings();
+  setupNextVisitAutomation();
   await loadVisits();
 });
 
@@ -115,7 +159,10 @@ $("visitForm").addEventListener("submit", async (e) => {
       serial: safe(fd.get("serial")),
       serviceType: safe(fd.get("serviceType")),
       technician: safe(fd.get("technician")),
+      visitInterval: safe(fd.get("visitInterval")),
+      visitIntervalLabel: $("visitInterval")?.selectedOptions[0]?.textContent || "Residencial estándar — 6 meses",
       nextVisit: safe(fd.get("nextVisit")),
+      nextVisitReason: safe(fd.get("nextVisitReason")),
       notes: safe(fd.get("notes")),
       recommendations: safe(fd.get("recommendations")),
       healthScore,
@@ -135,6 +182,8 @@ $("visitForm").addEventListener("submit", async (e) => {
 
     await addDoc(collection(db, "users", currentUser.uid, "visits"), data);
     e.target.reset();
+    $("visitInterval").value = "6";
+    setupNextVisitAutomation();
     updateHealthPreview();
     $("beforePhotos").value = "";
     $("afterPhotos").value = "";
@@ -194,6 +243,7 @@ function renderVisits(visits){
       <h3>${cleanText(v.clientName || "Cliente")}</h3>
       <p>${cleanText(v.serviceType || "Servicio")} · ${cleanText(v.createdAtText || "")}</p>
       <p>${cleanText([v.brand, v.btu, v.serial].filter(Boolean).join(" · "))}</p>
+      <p>Próxima visita: ${cleanText(v.nextVisit || "Por coordinar")}</p>
       <span class="badge ${status.cls}">${Number(v.healthScore || 0)} · ${status.label}</span>
       <div class="card-actions">
         <button type="button" class="small-btn" data-action="pdf" data-id="${v.id}">PDF</button>
@@ -230,6 +280,7 @@ function renderClients(visits){
       <h3>${cleanText(latest.clientName || "Cliente")}</h3>
       <p>${cleanText(latest.clientPhone || "")}</p>
       <p>${items.length} visita(s)</p>
+      <p>Próxima: ${cleanText(latest.nextVisit || "Por coordinar")}</p>
       <span class="badge ${status.cls}">${avg} · ${status.label}</span>`;
     list.appendChild(card);
   });
@@ -364,7 +415,8 @@ body{margin:0;background:#111;color:#f5f7fb;font-family:-apple-system,BlinkMacSy
     <div class="box">
       <h2>Próxima visita</h2>
       <div class="row"><b>${cleanText(v.nextVisit || "Por coordinar")}</b></div>
-      <div class="row muted">Seguimiento preventivo</div>
+      <div class="row muted">${cleanText(v.visitIntervalLabel || "Residencial estándar — 6 meses")}</div>
+      ${v.nextVisitReason ? `<div class="row muted">Motivo: ${cleanText(v.nextVisitReason)}</div>` : ""}
     </div>
   </div>
 

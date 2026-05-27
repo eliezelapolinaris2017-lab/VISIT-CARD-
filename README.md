@@ -1,47 +1,14 @@
-# Oasis Visit Card — Fix PDF + QR
+# Oasis Visit Card — Auto 6 meses
 
-Versión corregida:
-- PDF abre una ventana imprimible premium.
-- En esa ventana presiona "Guardar / Imprimir PDF".
-- QR abre una ventana con código QR imprimible.
-- WhatsApp sigue funcionando.
-- Firebase Auth, Firestore y Storage se mantienen igual.
+Cambio aplicado:
+- Próxima visita automática a 6 meses por defecto.
+- Opciones rápidas: 3, 2, 1 y 12 meses.
+- Fecha personalizada editable.
+- Campo de motivo para casos comerciales, alto uso u otra índole.
+- La próxima visita aparece en historial, clientes, WhatsApp y PDF.
 
-## Subida a GitHub
-Reemplaza en tu repositorio:
+Sube estos archivos al root del repo:
 - index.html
 - styles.css
 - app.js
 - manifest.json
-
-Sube al root, no dentro de carpeta.
-
-## Reglas Firestore
-```js
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
-      allow read, write:
-      if request.auth != null
-      && request.auth.uid == userId;
-    }
-  }
-}
-```
-
-## Reglas Storage
-```js
-rules_version = '2';
-
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /users/{userId}/{allPaths=**} {
-      allow read, write:
-      if request.auth != null
-      && request.auth.uid == userId;
-    }
-  }
-}
-```

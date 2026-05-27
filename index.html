@@ -64,7 +64,18 @@
           <option>Instalación</option>
         </select>
         <input name="technician" placeholder="Técnico" />
-        <input name="nextVisit" type="date" />
+
+        <div class="section-title">Próxima visita</div>
+        <select name="visitInterval" id="visitInterval">
+          <option value="6" selected>Residencial estándar — 6 meses</option>
+          <option value="3">Comercial / alto uso — 3 meses</option>
+          <option value="2">Alta demanda — 2 meses</option>
+          <option value="1">Seguimiento especial — 1 mes</option>
+          <option value="12">Anual — 12 meses</option>
+          <option value="custom">Fecha personalizada</option>
+        </select>
+        <input name="nextVisit" id="nextVisit" type="date" />
+        <input name="nextVisitReason" id="nextVisitReason" placeholder="Motivo del ajuste, si aplica" />
 
         <div class="section-title">Estado del sistema</div>
         <label>Enfriamiento <input name="cooling" type="range" min="0" max="100" value="85" /></label>
