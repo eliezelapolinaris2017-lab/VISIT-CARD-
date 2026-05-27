@@ -31,18 +31,9 @@
     </header>
 
     <section class="kpi-grid">
-      <article class="kpi-card">
-        <span>Visitas</span>
-        <strong id="kpiVisits">0</strong>
-      </article>
-      <article class="kpi-card">
-        <span>Clientes</span>
-        <strong id="kpiClients">0</strong>
-      </article>
-      <article class="kpi-card">
-        <span>Promedio Health</span>
-        <strong id="kpiHealth">—</strong>
-      </article>
+      <article class="kpi-card"><span>Visitas</span><strong id="kpiVisits">0</strong></article>
+      <article class="kpi-card"><span>Clientes</span><strong id="kpiClients">0</strong></article>
+      <article class="kpi-card"><span>Promedio Health</span><strong id="kpiHealth">—</strong></article>
     </section>
 
     <nav class="tabs">
@@ -82,10 +73,7 @@
         <label>Evaporador <input name="evaporator" type="range" min="0" max="100" value="85" /></label>
         <label>Condensador <input name="condenser" type="range" min="0" max="100" value="85" /></label>
 
-        <div class="score-preview">
-          <span>Health Score</span>
-          <strong id="healthPreview">85</strong>
-        </div>
+        <div class="score-preview"><span>Health Score</span><strong id="healthPreview">85</strong></div>
 
         <div class="section-title">Evidencia</div>
         <label class="file-box">Fotos antes <input id="beforePhotos" type="file" accept="image/*" multiple /></label>
@@ -126,8 +114,6 @@
     </form>
   </dialog>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

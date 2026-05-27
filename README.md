@@ -1,27 +1,22 @@
-# Oasis Visit Card
+# Oasis Visit Card — Fix PDF + QR
 
-Proyecto listo para GitHub Pages con Firebase Auth, Firestore y Storage.
+Versión corregida:
+- PDF abre una ventana imprimible premium.
+- En esa ventana presiona "Guardar / Imprimir PDF".
+- QR abre una ventana con código QR imprimible.
+- WhatsApp sigue funcionando.
+- Firebase Auth, Firestore y Storage se mantienen igual.
 
-## Archivos
+## Subida a GitHub
+Reemplaza en tu repositorio:
 - index.html
 - styles.css
 - app.js
 - manifest.json
 
-## Firebase ya integrado
-Proyecto:
-oasis-visit-card
-
-## Activar en Firebase
-1. Authentication > Sign-in method > Google > Enable
-2. Firestore Database > Create Database
-3. Storage > Get Started
-4. Authentication > Settings > Authorized domains
-   - añade tu dominio GitHub Pages: tuusuario.github.io
-   - añade tu dominio propio si aplica
+Sube al root, no dentro de carpeta.
 
 ## Reglas Firestore
-
 ```js
 rules_version = '2';
 
@@ -37,7 +32,6 @@ service cloud.firestore {
 ```
 
 ## Reglas Storage
-
 ```js
 rules_version = '2';
 
@@ -51,18 +45,3 @@ service firebase.storage {
   }
 }
 ```
-
-## GitHub Pages
-1. Sube los archivos al root del repositorio.
-2. Settings > Pages.
-3. Source: main.
-4. Folder: /root.
-5. Abre el enlace publicado.
-
-## Prueba
-1. Entrar con Google.
-2. Configurar negocio.
-3. Crear visita.
-4. Subir fotos.
-5. Guardar.
-6. Generar PDF o QR.
