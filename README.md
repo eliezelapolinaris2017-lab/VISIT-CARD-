@@ -1,14 +1,18 @@
-# Oasis Visit Card — Auto 6 meses
+# Oasis Visit Card — PDF real + Share
 
-Cambio aplicado:
-- Próxima visita automática a 6 meses por defecto.
-- Opciones rápidas: 3, 2, 1 y 12 meses.
-- Fecha personalizada editable.
-- Campo de motivo para casos comerciales, alto uso u otra índole.
-- La próxima visita aparece en historial, clientes, WhatsApp y PDF.
+Corrección aplicada:
+- El botón PDF ya no depende de imprimir desde Safari.
+- Genera un archivo PDF real con jsPDF.
+- En iPhone/iPad intenta abrir el menú de compartir.
+- En navegador de escritorio descarga el .pdf.
+- QR y WhatsApp quedan activos.
 
-Sube estos archivos al root del repo:
+Sube al root de GitHub:
 - index.html
 - styles.css
 - app.js
 - manifest.json
+
+Después en Safari:
+- recarga fuerte
+- si sigue viejo, borra caché o abre en ventana privada

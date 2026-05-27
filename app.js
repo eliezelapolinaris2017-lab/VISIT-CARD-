@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD9LW4cEV6NPC5wi7Zxrj6UKu0FeSUJZCI",
@@ -291,7 +292,7 @@ $("visitList").addEventListener("click", (e) => {
   if (!btn) return;
   const v = visitsCache.find(item => item.id === btn.dataset.id);
   if (!v) return alert("No se encontró la visita.");
-  if (btn.dataset.action === "pdf") openPrintablePDF(v);
+  if (btn.dataset.action === "pdf") generateRealPDF(v);
   if (btn.dataset.action === "qr") openQR(v);
   if (btn.dataset.action === "wa") sendWhatsApp(v);
 });
@@ -449,4 +450,213 @@ body{margin:0;background:#111;color:#f5f7fb;font-family:-apple-system,BlinkMacSy
   const w = window.open("", "_blank");
   if (!w) return alert("El navegador bloqueó la ventana. Permite pop-ups para esta página.");
   w.document.open(); w.document.write(html); w.document.close();
+}
+
+
+async function getImageDataUrl(url){
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function wrap(pdf, text, width){
+  return pdf.splitTextToSize(String(text || "—"), width);
+}
+
+async function generateRealPDF(v){
+  if (!v) return;
+
+  try {
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+    const W = pdf.internal.pageSize.getWidth();
+    const H = pdf.internal.pageSize.getHeight();
+    const m = 42;
+    const status = statusFromScore(v.healthScore || 0);
+
+    pdf.setFillColor(5, 7, 11);
+    pdf.rect(0, 0, W, H, "F");
+
+    pdf.setFillColor(13, 24, 42);
+    pdf.roundedRect(m - 10, m - 10, W - (m * 2) + 20, H - (m * 2) + 20, 18, 18, "F");
+
+    pdf.setTextColor(216, 180, 90);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.text((settings.businessName || "Oasis Air Cleaner Services LLC").toUpperCase(), m, 58);
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(30);
+    pdf.text("Visit Card", m, 92);
+
+    pdf.setTextColor(210, 218, 230);
+    pdf.setFontSize(11);
+    pdf.text("Expediente visual de servicio", m, 113);
+
+    if (settings.logoUrl) {
+      const logo = await getImageDataUrl(settings.logoUrl);
+      if (logo) pdf.addImage(logo, "PNG", W - 135, 46, 82, 82, undefined, "FAST");
+    }
+
+    let y = 145;
+    drawPdfBox(pdf, m, y, 250, 112, "CLIENTE", [
+      v.clientName || "—",
+      v.clientPhone || "—",
+      v.clientAddress || "—"
+    ]);
+    drawPdfBox(pdf, m + 270, y, 250, 112, "EQUIPO", [
+      `Marca: ${v.brand || "—"}`,
+      `Modelo: ${v.model || "—"}`,
+      `BTU: ${v.btu || "—"}`,
+      `Serial: ${v.serial || "—"}`
+    ]);
+
+    y += 128;
+    drawPdfBox(pdf, m, y, 250, 112, "SERVICIO", [
+      v.serviceType || "—",
+      `Fecha: ${v.createdAtText || "—"}`,
+      `Técnico: ${v.technician || "—"}`
+    ]);
+    drawPdfBox(pdf, m + 270, y, 250, 112, "PRÓXIMA VISITA", [
+      v.nextVisit || "Por coordinar",
+      v.visitIntervalLabel || "Residencial estándar — 6 meses",
+      v.nextVisitReason ? `Motivo: ${v.nextVisitReason}` : ""
+    ].filter(Boolean));
+
+    y += 135;
+    const c = hexToRgb(status.color);
+    pdf.setFillColor(c.r, c.g, c.b);
+    pdf.roundedRect(m, y, W - (m * 2), 64, 16, 16, "F");
+    pdf.setTextColor(5, 7, 11);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.text("HEALTH SCORE", m + 20, y + 38);
+    pdf.setFontSize(34);
+    pdf.text(`${Number(v.healthScore || 0)}/100`, m + 130, y + 43);
+    pdf.setFontSize(12);
+    pdf.text(status.label.toUpperCase(), W - 165, y + 38);
+
+    y += 95;
+    pdf.setTextColor(216, 180, 90);
+    pdf.setFontSize(10);
+    pdf.text("OBSERVACIONES TÉCNICAS", m, y);
+    pdf.setTextColor(245, 247, 251);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(wrap(pdf, v.notes || "—", W - (m * 2)), m, y + 20);
+
+    y += 80;
+    pdf.setTextColor(216, 180, 90);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("RECOMENDACIONES", m, y);
+    pdf.setTextColor(245, 247, 251);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(wrap(pdf, v.recommendations || "—", W - (m * 2)), m, y + 20);
+
+    y += 75;
+
+    const allPhotos = [
+      ...(v.beforeUrls || []).slice(0, 2),
+      ...(v.afterUrls || []).slice(0, 2)
+    ];
+
+    if (allPhotos.length) {
+      pdf.setTextColor(216, 180, 90);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("EVIDENCIA", m, y);
+      y += 12;
+
+      let x = m;
+      for (const url of allPhotos) {
+        const img = await getImageDataUrl(url);
+        if (img) {
+          pdf.addImage(img, "JPEG", x, y, 118, 78, undefined, "FAST");
+          x += 128;
+        }
+      }
+      y += 90;
+    }
+
+    const qr = await getImageDataUrl(qrUrl(visitPublicUrl(v), 220));
+    if (qr) pdf.addImage(qr, "PNG", W - 128, H - 135, 86, 86);
+
+    pdf.setDrawColor(255, 255, 255);
+    pdf.setLineWidth(0.3);
+    pdf.line(m, H - 115, W - m, H - 115);
+
+    pdf.setTextColor(210, 218, 230);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.text(settings.businessName || "Oasis Air Cleaner Services LLC", m, H - 85);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`${settings.businessPhone || ""} ${settings.businessEmail || ""}`, m, H - 70);
+    pdf.text(settings.businessAddress || "", m, H - 55);
+
+    const fileName = `Oasis-Visit-Card-${cleanFileName(v.clientName || "cliente")}.pdf`;
+    const blob = pdf.output("blob");
+    const file = new File([blob], fileName, { type: "application/pdf" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: "Oasis Visit Card",
+        text: "Resumen de servicio",
+        files: [file]
+      });
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (err) {
+    console.error(err);
+    alert("No se pudo generar el PDF real: " + err.message);
+  }
+}
+
+function drawPdfBox(pdf, x, y, w, h, title, lines){
+  pdf.setDrawColor(120, 145, 180);
+  pdf.setFillColor(22, 38, 64);
+  pdf.roundedRect(x, y, w, h, 14, 14, "FD");
+
+  pdf.setTextColor(216, 180, 90);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(10);
+  pdf.text(title, x + 14, y + 25);
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(10);
+  let yy = y + 48;
+  lines.forEach(line => {
+    const wrapped = pdf.splitTextToSize(String(line || "—"), w - 28);
+    pdf.text(wrapped.slice(0, 2), x + 14, yy);
+    yy += wrapped.length > 1 ? 24 : 18;
+  });
+}
+
+function hexToRgb(hex){
+  const clean = String(hex || "#ffffff").replace("#", "");
+  const num = parseInt(clean, 16);
+  return { r:(num >> 16) & 255, g:(num >> 8) & 255, b:num & 255 };
+}
+
+function cleanFileName(str){
+  return String(str || "archivo").replace(/[^\w\-]+/g, "_").slice(0, 50);
 }
