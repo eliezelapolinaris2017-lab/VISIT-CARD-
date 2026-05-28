@@ -1,19 +1,19 @@
-# Oasis Visit Card — Stable Equipment Life
+# Oasis Visit Card — Life Cards V2
 
-Versión estable:
-- Se recupera el login.
-- Mantiene editar, borrar, PDF real, QR y WhatsApp.
-- Añade Área / ubicación del equipo.
-- Serial queda opcional.
-- Tarjetas de cliente muestran diagnóstico de vida por equipo.
+Cambio real de visual:
+- Historial ya no usa tarjetas simples.
+- Tarjeta principal tipo diagnóstico de vida.
+- Área del equipo como protagonista.
+- Serial opcional y fuera del enfoque visual.
+- Health score grande.
+- Diagnóstico visual por estado.
+- Acciones integradas.
 
-Sube al root del repo:
+Sube al root:
 - index.html
 - styles.css
 - app.js
 - manifest.json
 
-Si no entra:
-- abre ventana privada
-- borra caché
-- verifica consola: no debe haber error de app.js
+Importante:
+Después de subir, abre en ventana privada o cambia la URL agregando ?v=2 para evitar caché.

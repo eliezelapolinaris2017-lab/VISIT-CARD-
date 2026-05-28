@@ -42,3 +42,80 @@
 .equipment-card small{display:block;color:var(--muted);margin-top:6px}
 .detail-equipment-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
 @media(max-width:760px){.client-life-head{flex-direction:column}.life-score{width:100%;height:auto;padding:14px;display:block}}
+
+/* ===== LIFE VISIT CARDS V2 ===== */
+.cards{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.life-visit-card{
+  position:relative;
+  overflow:hidden;
+  border-radius:30px;
+  padding:18px;
+  min-height:310px;
+  border:1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.045)),
+    radial-gradient(circle at 12% 0%,rgba(20,184,255,.18),transparent 35%);
+  box-shadow:0 24px 70px rgba(0,0,0,.34);
+}
+.life-visit-card.ok{border-color:rgba(68,209,122,.28)}
+.life-visit-card.warn{border-color:rgba(255,203,71,.32)}
+.life-visit-card.danger{border-color:rgba(255,77,103,.34)}
+.life-card-glow{
+  position:absolute;
+  inset:-80px -60px auto auto;
+  width:190px;
+  height:190px;
+  border-radius:50%;
+  background:rgba(20,184,255,.20);
+  filter:blur(24px);
+}
+.life-visit-card.ok .life-card-glow{background:rgba(68,209,122,.18)}
+.life-visit-card.warn .life-card-glow{background:rgba(255,203,71,.20)}
+.life-visit-card.danger .life-card-glow{background:rgba(255,77,103,.20)}
+.life-visit-card > *{position:relative}
+.life-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.life-label{
+  display:inline-flex;
+  color:var(--gold);
+  font-size:10px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  font-weight:900;
+  margin-bottom:7px;
+}
+.life-card-head h3{margin:0;font-size:25px;line-height:1.05}
+.life-card-head p{margin:8px 0 0;color:var(--muted);font-weight:700}
+.life-ring{
+  width:86px;
+  height:86px;
+  flex:0 0 86px;
+  border-radius:28px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.24);
+}
+.life-ring strong{font-size:31px;line-height:.8}
+.life-ring small{display:block;color:var(--muted);font-size:12px;font-weight:900}
+.life-ring.ok{box-shadow:inset 0 0 0 2px rgba(68,209,122,.32)}
+.life-ring.warn{box-shadow:inset 0 0 0 2px rgba(255,203,71,.35)}
+.life-ring.danger{box-shadow:inset 0 0 0 2px rgba(255,77,103,.35)}
+.life-status-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:18px 0 12px;color:var(--muted);font-weight:900}
+.life-status{border-radius:999px;padding:8px 11px;color:white;font-size:12px}
+.life-status.ok{background:rgba(68,209,122,.22);color:#86f7ad}
+.life-status.warn{background:rgba(255,203,71,.22);color:#ffe08a}
+.life-status.danger{background:rgba(255,77,103,.22);color:#ffb4c0}
+.life-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.life-info-grid div{border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(0,0,0,.18);padding:11px}
+.life-info-grid small{display:block;color:var(--muted);font-size:11px;font-weight:900;margin-bottom:5px}
+.life-info-grid strong{font-size:13px}
+.life-note{margin-top:12px;border:1px solid rgba(216,180,90,.22);background:rgba(216,180,90,.09);border-radius:16px;padding:10px;color:#f3d98d;font-weight:800;font-size:13px}
+.life-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.life-actions .small-btn,.life-actions .danger-btn{flex:1;min-width:82px}
+.empty-card{min-height:auto}
+@media(max-width:760px){
+  .cards{grid-template-columns:1fr}
+  .life-card-head{flex-direction:column}
+  .life-ring{width:100%;height:auto;padding:14px;display:block}
+}

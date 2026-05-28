@@ -235,53 +235,6 @@ function renderKpis(visits){
   $("kpiHealth").textContent = visits.length ? Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length) : "—";
 }
 
-function renderVisits(visits){
-  const list = $("visitList");
-  list.innerHTML = "";
-  if (!visits.length) {
-    list.innerHTML = `<div class="visit-card"><h3>Sin visitas</h3><p>Crea la primera tarjeta de servicio.</p></div>`;
-    return;
-  }
-  visits.forEach(v => {
-    const status = statusFromScore(v.healthScore);
-    const card = document.createElement("article");
-    card.className = "visit-card";
-    card.innerHTML = `
-      <h3>${cleanText(v.clientName || "Cliente")}</h3>
-      <p>${cleanText(v.serviceType || "Servicio")} · ${cleanText(v.createdAtText || "")}</p>
-      <p>${cleanText([v.equipmentLocation || "Equipo", v.brand, v.btu].filter(Boolean).join(" · "))}</p>
-      <p>Próxima visita: ${cleanText(v.nextVisit || "Por coordinar")}</p>
-      <span class="badge ${status.cls}">${Number(v.healthScore || 0)} · ${status.label}</span>
-      <div>
-        <span class="meta-pill">${cleanText(v.visitIntervalLabel || "6 meses")}</span>
-        ${v.nextVisitReason ? `<span class="meta-pill">Ajustado</span>` : ""}
-      </div>
-      <div class="card-actions">
-        <button type="button" class="small-btn" data-action="view" data-id="${v.id}">Ver</button>
-        <button type="button" class="small-btn" data-action="edit" data-id="${v.id}">Editar</button>
-        <button type="button" class="small-btn" data-action="pdf" data-id="${v.id}">PDF</button>
-        <button type="button" class="small-btn" data-action="qr" data-id="${v.id}">QR</button>
-        ${v.clientPhone ? `<button type="button" class="small-btn" data-action="wa" data-id="${v.id}">WhatsApp</button>` : ""}
-        <button type="button" class="danger-btn" data-action="delete" data-id="${v.id}">Borrar</button>
-      </div>`;
-    list.appendChild(card);
-  });
-}
-
-
-function getEquipmentTitle(v){
-  return v.equipmentLocation || [v.brand, v.btu].filter(Boolean).join(" ") || "Equipo";
-}
-
-function getEquipmentKey(v){
-  const area = String(v.equipmentLocation || "").trim().toLowerCase();
-  if (area) return "area:" + area;
-  return [
-    String(v.brand || "").trim().toLowerCase(),
-    String(v.model || "").trim().toLowerCase(),
-    String(v.btu || "").trim().toLowerCase()
-  ].join("|") || "equipo";
-}
 
 function getLifeDiagnosis(score, visits){
   score = Number(score || 0);
@@ -291,26 +244,79 @@ function getLifeDiagnosis(score, visits){
   return { label:"Riesgo operativo", cls:"danger", note:"Requiere evaluación prioritaria." };
 }
 
-function groupEquipmentsForClient(items){
-  const map = new Map();
-  items.forEach(v => {
-    const key = getEquipmentKey(v);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(v);
-  });
-
-  return Array.from(map.values()).map(eqVisits => {
-    const latest = eqVisits[0];
-    const avg = Math.round(eqVisits.reduce((s,v)=>s+Number(v.healthScore||0),0) / eqVisits.length);
-    return {
-      latest,
-      visits: eqVisits,
-      avg,
-      diagnosis: getLifeDiagnosis(avg, eqVisits.length)
-    };
-  });
+function getEquipmentTitle(v){
+  return v.equipmentLocation || [v.brand, v.btu].filter(Boolean).join(" ") || "Equipo";
 }
 
+function renderVisits(visits){
+  const list = $("visitList");
+  list.innerHTML = "";
+
+  if (!visits.length) {
+    list.innerHTML = `<div class="life-visit-card empty-card"><h3>Sin visitas</h3><p>Crea el primer diagnóstico de vida del equipo.</p></div>`;
+    return;
+  }
+
+  visits.forEach(v => {
+    const status = statusFromScore(v.healthScore);
+    const life = getLifeDiagnosis ? getLifeDiagnosis(v.healthScore, 1) : { label: status.label, cls: status.cls, note: "Seguimiento recomendado." };
+    const area = getEquipmentTitle ? getEquipmentTitle(v) : (v.equipmentLocation || "Equipo");
+
+    const card = document.createElement("article");
+    card.className = `life-visit-card ${life.cls}`;
+    card.innerHTML = `
+      <div class="life-card-glow"></div>
+
+      <div class="life-card-head">
+        <div>
+          <span class="life-label">Diagnóstico de vida</span>
+          <h3>${cleanText(area)}</h3>
+          <p>${cleanText([v.brand, v.model, v.btu].filter(Boolean).join(" · ") || "Equipo sin datos completos")}</p>
+        </div>
+        <div class="life-ring ${status.cls}">
+          <strong>${Number(v.healthScore || 0)}</strong>
+          <small>/100</small>
+        </div>
+      </div>
+
+      <div class="life-status-row">
+        <span class="life-status ${life.cls}">${life.label}</span>
+        <span>${cleanText(v.serviceType || "Servicio")}</span>
+      </div>
+
+      <div class="life-info-grid">
+        <div>
+          <small>Cliente</small>
+          <strong>${cleanText(v.clientName || "Cliente")}</strong>
+        </div>
+        <div>
+          <small>Próxima visita</small>
+          <strong>${cleanText(v.nextVisit || "Por coordinar")}</strong>
+        </div>
+        <div>
+          <small>Técnico</small>
+          <strong>${cleanText(v.technician || "—")}</strong>
+        </div>
+        <div>
+          <small>Fecha</small>
+          <strong>${cleanText(v.createdAtText || "—")}</strong>
+        </div>
+      </div>
+
+      ${v.nextVisitReason ? `<div class="life-note">Ajuste: ${cleanText(v.nextVisitReason)}</div>` : ""}
+
+      <div class="life-actions">
+        <button type="button" class="small-btn" data-action="view" data-id="${v.id}">Ver</button>
+        <button type="button" class="small-btn" data-action="edit" data-id="${v.id}">Editar</button>
+        <button type="button" class="small-btn" data-action="pdf" data-id="${v.id}">PDF</button>
+        <button type="button" class="small-btn" data-action="qr" data-id="${v.id}">QR</button>
+        ${v.clientPhone ? `<button type="button" class="small-btn" data-action="wa" data-id="${v.id}">WhatsApp</button>` : ""}
+        <button type="button" class="danger-btn" data-action="delete" data-id="${v.id}">Borrar</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
 
 function renderClients(visits){
   const map = new Map();
