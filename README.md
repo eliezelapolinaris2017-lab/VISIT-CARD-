@@ -1,11 +1,12 @@
-# Oasis Visit Card — Expediente de Cliente
+# Oasis Visit Card — Equipment Life
 
-Mejoras:
-- Clientes agrupados correctamente.
-- Una tarjeta por cliente.
-- Ver historial completo por cliente.
-- Descargar/compartir PDF de expediente de cliente.
-- Mantiene edición, borrado, QR, WhatsApp y PDF por visita.
+Cambio estratégico:
+- Tarjetas como diagnóstico de vida por equipo.
+- Un cliente/lugar puede tener muchos equipos.
+- El serial queda opcional y deja de dominar la tarjeta.
+- Se usa Área / ubicación del equipo: Sala, Master, Oficina, Recepción, etc.
+- PDF expediente muestra estado general del lugar y estado de vida por equipo.
+- Diseño más premium y deseable.
 
 Sube al root del repo:
 - index.html
