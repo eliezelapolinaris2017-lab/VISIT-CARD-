@@ -268,11 +268,49 @@ function renderVisits(visits){
   });
 }
 
-function clientKey(v){
-  const phone = (v.clientPhone || "").replace(/\D/g, "");
-  if (phone) return `phone:${phone}`;
-  return `name:${String(v.clientName || "").trim().toLowerCase()}|addr:${String(v.clientAddress || "").trim().toLowerCase()}`;
+
+function getEquipmentTitle(v){
+  return v.equipmentLocation || [v.brand, v.btu].filter(Boolean).join(" ") || "Equipo";
 }
+
+function getEquipmentKey(v){
+  const area = String(v.equipmentLocation || "").trim().toLowerCase();
+  if (area) return "area:" + area;
+  return [
+    String(v.brand || "").trim().toLowerCase(),
+    String(v.model || "").trim().toLowerCase(),
+    String(v.btu || "").trim().toLowerCase()
+  ].join("|") || "equipo";
+}
+
+function getLifeDiagnosis(score, visits){
+  score = Number(score || 0);
+  if (score >= 88 && visits >= 2) return { label:"Vida estable", cls:"ok", note:"Mantener ciclo preventivo." };
+  if (score >= 78) return { label:"Buen estado", cls:"ok", note:"Seguimiento normal recomendado." };
+  if (score >= 62) return { label:"Atención preventiva", cls:"warn", note:"Conviene reducir intervalo." };
+  return { label:"Riesgo operativo", cls:"danger", note:"Requiere evaluación prioritaria." };
+}
+
+function groupEquipmentsForClient(items){
+  const map = new Map();
+  items.forEach(v => {
+    const key = getEquipmentKey(v);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(v);
+  });
+
+  return Array.from(map.values()).map(eqVisits => {
+    const latest = eqVisits[0];
+    const avg = Math.round(eqVisits.reduce((s,v)=>s+Number(v.healthScore||0),0) / eqVisits.length);
+    return {
+      latest,
+      visits: eqVisits,
+      avg,
+      diagnosis: getLifeDiagnosis(avg, eqVisits.length)
+    };
+  });
+}
+
 
 function renderClients(visits){
   const map = new Map();
@@ -299,41 +337,48 @@ function renderClients(visits){
   groups.forEach(group => {
     const items = group.items;
     const latest = group.latest;
+    const eqGroups = groupEquipmentsForClient(items);
     const avg = Math.round(items.reduce((s,v)=>s+Number(v.healthScore||0),0)/items.length);
     const status = statusFromScore(avg);
-    const nextDates = items.map(v => v.nextVisit).filter(Boolean).sort();
-    const next = nextDates[0] || latest.nextVisit || "Por coordinar";
 
     const card = document.createElement("article");
-    card.className = "visit-card client-master-card";
+    card.className = "client-life-card";
     card.innerHTML = `
-      <h3>${cleanText(latest.clientName || "Cliente")}</h3>
-      <p>${cleanText(latest.clientPhone || "")}</p>
-      <p>${cleanText(latest.clientAddress || "")}</p>
-      <p>${items.length} visita(s) registradas</p>
-      <p>Próxima: ${cleanText(next)}</p>
-      <span class="badge ${status.cls}">${avg} · ${status.label}</span>
+      <div class="client-life-head">
+        <div>
+          <span>Expediente</span>
+          <h3>${cleanText(latest.clientName || "Cliente")}</h3>
+          <p>${cleanText(latest.clientPhone || "")}</p>
+          <p>${cleanText(latest.clientAddress || "")}</p>
+        </div>
+        <div class="life-score ${status.cls}">
+          <strong>${avg}</strong>
+          <small>Health</small>
+        </div>
+      </div>
+
+      <div class="equipment-grid">
+        ${eqGroups.map(eq => `
+          <div class="equipment-card ${eq.diagnosis.cls}">
+            <div class="equipment-top">
+              <h4>${cleanText(getEquipmentTitle(eq.latest))}</h4>
+              <strong>${eq.avg}/100</strong>
+            </div>
+            <p>${cleanText([eq.latest.brand, eq.latest.model, eq.latest.btu].filter(Boolean).join(" · "))}</p>
+            <span>${eq.diagnosis.label}</span>
+            <small>${eq.visits.length} visita(s) · Próxima: ${cleanText(eq.latest.nextVisit || "Por coordinar")}</small>
+          </div>
+        `).join("")}
+      </div>
+
       <div class="card-actions">
-        <button type="button" class="small-btn" data-client-action="history" data-key="${cleanText(group.key)}">Ver historial</button>
+        <button type="button" class="small-btn" data-client-action="history" data-key="${cleanText(group.key)}">Ver expediente</button>
         <button type="button" class="small-btn" data-client-action="pdf-history" data-key="${cleanText(group.key)}">PDF expediente</button>
       </div>
     `;
     list.appendChild(card);
   });
 }
-
-$("clientList").addEventListener("click", async (e) => {
-  const btn = e.target.closest("button[data-client-action]");
-  if (!btn) return;
-
-  const key = btn.dataset.key;
-  const visits = visitsCache.filter(v => clientKey(v) === key);
-
-  if (!visits.length) return alert("No se encontró historial para este cliente.");
-
-  if (btn.dataset.clientAction === "history") openClientHistory(visits);
-  if (btn.dataset.clientAction === "pdf-history") await generateClientHistoryPDF(visits);
-});
 
 $("visitList").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-action]");
@@ -381,191 +426,6 @@ $("settingsForm").addEventListener("submit", async (e) => {
 });
 
 
-
-function openClientHistory(visits){
-  const latest = visits[0];
-  const avg = Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length);
-  const status = statusFromScore(avg);
-
-  $("detailContent").innerHTML = `
-    <h2>Expediente de cliente</h2>
-    <p class="muted">${cleanText(latest.clientName || "Cliente")} · ${cleanText(latest.clientPhone || "")}</p>
-    <span class="badge ${status.cls}">${avg} · Promedio Health</span>
-    <div class="detail-grid">
-      <div class="detail-box"><h3>Cliente</h3><p>${cleanText(latest.clientName || "—")}</p><p>${cleanText(latest.clientPhone || "—")}</p><p>${cleanText(latest.clientAddress || "—")}</p></div>
-      <div class="detail-box"><h3>Resumen</h3><p>${visits.length} visita(s)</p><p>Última visita: ${cleanText(latest.createdAtText || "—")}</p><p>Próxima: ${cleanText(latest.nextVisit || "Por coordinar")}</p></div>
-    </div>
-    <h3>Historial de visitas</h3>
-    <div class="history-timeline">
-      ${visits.map(v => {
-        const s = statusFromScore(v.healthScore);
-        return `
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-card">
-              <h4>${cleanText(v.createdAtText || "Sin fecha")} · ${cleanText(v.serviceType || "Servicio")}</h4>
-              <p>${cleanText([v.brand, v.model, v.btu, v.serial].filter(Boolean).join(" · "))}</p>
-              <p>Health: <b>${Number(v.healthScore || 0)}/100</b> · ${s.label}</p>
-              <p>Próxima visita: ${cleanText(v.nextVisit || "Por coordinar")}</p>
-              ${v.notes ? `<p><b>Obs:</b> ${cleanText(v.notes)}</p>` : ""}
-              ${v.recommendations ? `<p><b>Rec:</b> ${cleanText(v.recommendations)}</p>` : ""}
-            </div>
-          </div>
-        `;
-      }).join("")}
-    </div>
-  `;
-  $("detailDialog").showModal();
-}
-
-async function generateClientHistoryPDF(visits){
-  if (!visits || !visits.length) return;
-
-  try {
-    const latest = visits[0];
-    const avg = Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length);
-    const status = statusFromScore(avg);
-
-    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
-    const W = pdf.internal.pageSize.getWidth();
-    const H = pdf.internal.pageSize.getHeight();
-    const m = 42;
-
-    function header(title = "Expediente de Cliente"){
-      pdf.setFillColor(245,247,251);
-      pdf.rect(0,0,W,H,"F");
-      pdf.setFillColor(7,12,24);
-      pdf.roundedRect(28,28,W-56,H-56,24,24,"F");
-      pdf.setFillColor(12,24,45);
-      pdf.roundedRect(m-6,m-6,W-(m*2)+12,H-(m*2)+12,18,18,"F");
-
-      pdf.setTextColor(216,180,90);
-      pdf.setFont("helvetica","bold");
-      pdf.setFontSize(9);
-      pdf.text((settings.businessName || "Oasis Air Cleaner Services LLC").toUpperCase(), m, 58);
-
-      pdf.setTextColor(255,255,255);
-      pdf.setFontSize(26);
-      pdf.text(title, m, 88);
-
-      pdf.setTextColor(210,218,230);
-      pdf.setFontSize(10);
-      pdf.text("Historial técnico acumulado", m, 108);
-    }
-
-    header();
-
-    let y = 140;
-
-    drawPdfBox(pdf, m, y, 250, 116, "CLIENTE", [
-      latest.clientName || "—",
-      latest.clientPhone || "—",
-      latest.clientAddress || "—"
-    ]);
-
-    drawPdfBox(pdf, m + 270, y, 250, 116, "RESUMEN", [
-      `${visits.length} visita(s) registradas`,
-      `Promedio Health: ${avg}/100`,
-      `Última visita: ${latest.createdAtText || "—"}`,
-      `Próxima: ${latest.nextVisit || "Por coordinar"}`
-    ]);
-
-    y += 142;
-
-    const c = hexToRgb(status.color);
-    pdf.setFillColor(c.r,c.g,c.b);
-    pdf.roundedRect(m,y,W-(m*2),58,16,16,"F");
-    pdf.setTextColor(5,7,11);
-    pdf.setFont("helvetica","bold");
-    pdf.setFontSize(11);
-    pdf.text("ESTADO GENERAL DEL CLIENTE", m+20, y+35);
-    pdf.setFontSize(28);
-    pdf.text(`${avg}/100`, W-155, y+38);
-
-    y += 90;
-
-    pdf.setTextColor(216,180,90);
-    pdf.setFont("helvetica","bold");
-    pdf.setFontSize(11);
-    pdf.text("HISTORIAL DE VISITAS", m, y);
-    y += 24;
-
-    for (let i = 0; i < visits.length; i++) {
-      const v = visits[i];
-      const s = statusFromScore(v.healthScore);
-
-      if (y > H - 170) {
-        pdf.addPage();
-        header("Expediente de Cliente");
-        y = 140;
-      }
-
-      pdf.setDrawColor(90,115,150);
-      pdf.setFillColor(22,38,64);
-      pdf.roundedRect(m, y, W-(m*2), 118, 14, 14, "FD");
-
-      pdf.setTextColor(216,180,90);
-      pdf.setFont("helvetica","bold");
-      pdf.setFontSize(10);
-      pdf.text(`${i+1}. ${v.createdAtText || "Sin fecha"} · ${v.serviceType || "Servicio"}`, m+16, y+24);
-
-      pdf.setTextColor(245,247,251);
-      pdf.setFontSize(10);
-      pdf.text(wrap(pdf, `${v.brand || "—"} ${v.model || ""} ${v.btu || ""} · Serial: ${v.serial || "—"}`, W-(m*2)-32), m+16, y+44);
-
-      pdf.setTextColor(210,218,230);
-      pdf.text(`Health: ${Number(v.healthScore || 0)}/100 · ${s.label}`, m+16, y+64);
-      pdf.text(`Próxima visita: ${v.nextVisit || "Por coordinar"}`, m+16, y+82);
-
-      const obs = [v.notes ? `Obs: ${v.notes}` : "", v.recommendations ? `Rec: ${v.recommendations}` : ""].filter(Boolean).join("  |  ");
-      if (obs) {
-        pdf.setFontSize(8.5);
-        pdf.text(wrap(pdf, obs, W-(m*2)-32).slice(0,2), m+16, y+101);
-      }
-
-      y += 132;
-    }
-
-    pdf.setDrawColor(255,255,255);
-    pdf.setLineWidth(.3);
-    pdf.line(m,H-92,W-m,H-92);
-
-    pdf.setTextColor(210,218,230);
-    pdf.setFont("helvetica","bold");
-    pdf.setFontSize(9);
-    pdf.text(settings.businessName || "Oasis Air Cleaner Services LLC", m, H-68);
-    pdf.setFont("helvetica","normal");
-    pdf.text(`${settings.businessPhone || ""} ${settings.businessEmail || ""}`, m, H-53);
-
-    const fileName = `Oasis-Expediente-${cleanFileName(latest.clientName || "cliente")}.pdf`;
-    const blob = pdf.output("blob");
-    const file = new File([blob], fileName, { type: "application/pdf" });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: "Expediente de Cliente",
-        text: "Historial técnico de servicio",
-        files: [file]
-      });
-      return;
-    }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-
-  } catch (err) {
-    console.error(err);
-    alert("No se pudo generar el expediente PDF: " + err.message);
-  }
-}
-
-
 function clearVisitForm(){
   const form = $("visitForm");
   form.reset();
@@ -588,7 +448,7 @@ function editVisit(v){
   form.clientName.value = v.clientName || "";
   form.clientPhone.value = v.clientPhone || "";
   form.clientAddress.value = v.clientAddress || "";
-  form.equipmentLocation.value = v.equipmentLocation || "";
+  if (form.equipmentLocation) form.equipmentLocation.value = v.equipmentLocation || "";
   form.brand.value = v.brand || "";
   form.model.value = v.model || "";
   form.btu.value = v.btu || "";
@@ -976,191 +836,4 @@ function hexToRgb(hex){
 
 function cleanFileName(str){
   return String(str || "archivo").replace(/[^\w\-]+/g, "_").slice(0, 50);
-}
-
-
-/* ===== EQUIPMENT LIFE REPORT OVERRIDES ===== */
-function equipmentKey(v){
-  const area = String(v.equipmentLocation || "").trim().toLowerCase();
-  const brand = String(v.brand || "").trim().toLowerCase();
-  const model = String(v.model || "").trim().toLowerCase();
-  const btu = String(v.btu || "").trim().toLowerCase();
-  if (area) return `area:${area}`;
-  return `eq:${brand}|${model}|${btu || "na"}`;
-}
-function equipmentTitle(v){
-  return v.equipmentLocation || [v.brand, v.btu].filter(Boolean).join(" ") || "Equipo sin área";
-}
-function lifeDiagnosis(score, visitCount){
-  score = Number(score || 0);
-  if (score >= 88 && visitCount >= 2) return { label:"Vida estable", tone:"ok", advice:"Mantener ciclo preventivo." };
-  if (score >= 78) return { label:"Buen estado", tone:"ok", advice:"Seguimiento normal recomendado." };
-  if (score >= 62) return { label:"Atención preventiva", tone:"warn", advice:"Conviene reducir el intervalo de mantenimiento." };
-  return { label:"Riesgo operativo", tone:"danger", advice:"Requiere evaluación técnica prioritaria." };
-}
-function groupByClient(visits){
-  const map = new Map();
-  visits.forEach(v => {
-    const key = clientKey(v);
-    if (!key || key === "name:|addr:") return;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(v);
-  });
-  return Array.from(map.entries()).map(([key, items]) => ({key, items, latest:items[0]}));
-}
-function groupEquipments(visits){
-  const map = new Map();
-  visits.forEach(v => {
-    const key = equipmentKey(v);
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(v);
-  });
-  return Array.from(map.entries()).map(([key, items]) => {
-    const latest = items[0];
-    const avg = Math.round(items.reduce((s,v)=>s+Number(v.healthScore||0),0)/items.length);
-    const dx = lifeDiagnosis(avg, items.length);
-    return { key, items, latest, avg, dx };
-  }).sort((a,b) => String(equipmentTitle(a.latest)).localeCompare(String(equipmentTitle(b.latest))));
-}
-function renderClients(visits){
-  const groups = groupByClient(visits).sort((a,b)=>String(a.latest.clientName||"").localeCompare(String(b.latest.clientName||"")));
-  const list = $("clientList");
-  list.innerHTML = "";
-  if (!groups.length) {
-    list.innerHTML = `<div class="visit-card"><h3>Sin clientes</h3><p>Los clientes aparecerán aquí automáticamente.</p></div>`;
-    return;
-  }
-  groups.forEach(group => {
-    const items = group.items;
-    const latest = group.latest;
-    const eqGroups = groupEquipments(items);
-    const avg = Math.round(items.reduce((s,v)=>s+Number(v.healthScore||0),0)/items.length);
-    const status = statusFromScore(avg);
-    const card = document.createElement("article");
-    card.className = "client-life-card";
-    card.innerHTML = `
-      <div class="client-life-head">
-        <div>
-          <span>Expediente</span>
-          <h3>${cleanText(latest.clientName || "Cliente")}</h3>
-          <p>${cleanText(latest.clientPhone || "")}</p>
-          <p>${cleanText(latest.clientAddress || "")}</p>
-        </div>
-        <div class="life-score ${status.cls}">
-          <strong>${avg}</strong><small>Health</small>
-        </div>
-      </div>
-      <div class="equipment-grid">
-        ${eqGroups.map(eq => `
-          <div class="equipment-card ${eq.dx.tone}">
-            <div class="equipment-top">
-              <h4>${cleanText(equipmentTitle(eq.latest))}</h4>
-              <strong>${eq.avg}/100</strong>
-            </div>
-            <p>${cleanText([eq.latest.brand, eq.latest.model, eq.latest.btu].filter(Boolean).join(" · "))}</p>
-            <span>${eq.dx.label}</span>
-            <small>${eq.items.length} visita(s) · Próxima: ${cleanText(eq.latest.nextVisit || "Por coordinar")}</small>
-          </div>
-        `).join("")}
-      </div>
-      <div class="card-actions">
-        <button type="button" class="small-btn" data-client-action="history" data-key="${cleanText(group.key)}">Ver diagnóstico</button>
-        <button type="button" class="small-btn" data-client-action="pdf-history" data-key="${cleanText(group.key)}">PDF vida equipos</button>
-      </div>`;
-    list.appendChild(card);
-  });
-}
-function openClientHistory(visits){
-  const latest = visits[0], eqGroups = groupEquipments(visits);
-  const avg = Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length);
-  const status = statusFromScore(avg);
-  $("detailContent").innerHTML = `
-    <h2>Diagnóstico de vida por equipo</h2>
-    <p class="muted">${cleanText(latest.clientName || "Cliente")} · ${cleanText(latest.clientAddress || "")}</p>
-    <span class="badge ${status.cls}">${avg} · Estado general</span>
-    <div class="equipment-grid detail-equipment-grid">
-      ${eqGroups.map(eq => `
-        <div class="equipment-card ${eq.dx.tone}">
-          <div class="equipment-top">
-            <h4>${cleanText(equipmentTitle(eq.latest))}</h4>
-            <strong>${eq.avg}/100</strong>
-          </div>
-          <p>${cleanText([eq.latest.brand, eq.latest.model, eq.latest.btu].filter(Boolean).join(" · "))}</p>
-          <span>${eq.dx.label}</span>
-          <small>${eq.dx.advice}</small>
-        </div>`).join("")}
-    </div>
-    <h3>Historial técnico</h3>
-    <div class="history-timeline">
-      ${visits.map(v => {
-        const s = statusFromScore(v.healthScore);
-        return `<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card">
-          <h4>${cleanText(equipmentTitle(v))} · ${cleanText(v.createdAtText || "Sin fecha")}</h4>
-          <p>${cleanText(v.serviceType || "Servicio")} · Health ${Number(v.healthScore || 0)}/100 · ${s.label}</p>
-          <p>${cleanText([v.brand, v.model, v.btu].filter(Boolean).join(" · "))}</p>
-          <p>Próxima visita: ${cleanText(v.nextVisit || "Por coordinar")}</p>
-          ${v.notes ? `<p><b>Obs:</b> ${cleanText(v.notes)}</p>` : ""}
-          ${v.recommendations ? `<p><b>Rec:</b> ${cleanText(v.recommendations)}</p>` : ""}
-        </div></div>`;
-      }).join("")}
-    </div>`;
-  $("detailDialog").showModal();
-}
-async function generateClientHistoryPDF(visits){
-  if (!visits || !visits.length) return;
-  try {
-    const latest = visits[0], eqGroups = groupEquipments(visits);
-    const avg = Math.round(visits.reduce((s,v)=>s+Number(v.healthScore||0),0)/visits.length);
-    const status = statusFromScore(avg);
-    const pdf = new jsPDF({ orientation:"portrait", unit:"pt", format:"letter" });
-    const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), m = 42;
-    function pageBase(title){
-      pdf.setFillColor(247,249,252); pdf.rect(0,0,W,H,"F");
-      pdf.setFillColor(5,9,18); pdf.roundedRect(24,24,W-48,H-48,26,26,"F");
-      pdf.setFillColor(12,24,45); pdf.roundedRect(m-6,m-6,W-(m*2)+12,H-(m*2)+12,20,20,"F");
-      pdf.setTextColor(216,180,90); pdf.setFont("helvetica","bold"); pdf.setFontSize(9);
-      pdf.text((settings.businessName || "Oasis Air Cleaner Services LLC").toUpperCase(), m, 58);
-      pdf.setTextColor(255,255,255); pdf.setFontSize(25); pdf.text(title, m, 88);
-      pdf.setTextColor(210,218,230); pdf.setFontSize(10); pdf.text("Diagnóstico de estado de vida por equipo", m, 108);
-    }
-    pageBase("Expediente de Equipos");
-    let y = 140;
-    drawPdfBox(pdf, m, y, 250, 116, "CLIENTE", [latest.clientName || "—", latest.clientPhone || "—", latest.clientAddress || "—"]);
-    drawPdfBox(pdf, m+270, y, 250, 116, "RESUMEN", [`${eqGroups.length} equipo(s) identificado(s)`, `${visits.length} visita(s) registradas`, `Health general: ${avg}/100`, `Estado: ${status.label}`]);
-    y += 145;
-    const c = hexToRgb(status.color);
-    pdf.setFillColor(c.r,c.g,c.b); pdf.roundedRect(m,y,W-(m*2),58,16,16,"F");
-    pdf.setTextColor(5,7,11); pdf.setFont("helvetica","bold"); pdf.setFontSize(11);
-    pdf.text("ESTADO GENERAL DE LA RESIDENCIA / LUGAR", m+20, y+35);
-    pdf.setFontSize(28); pdf.text(`${avg}/100`, W-155, y+38);
-    y += 88;
-    pdf.setTextColor(216,180,90); pdf.setFont("helvetica","bold"); pdf.setFontSize(11);
-    pdf.text("ESTADO DE VIDA POR EQUIPO", m, y); y += 20;
-    for (const eq of eqGroups) {
-      if (y > H - 160) { pdf.addPage(); pageBase("Expediente de Equipos"); y = 140; }
-      const tone = statusFromScore(eq.avg), cc = hexToRgb(tone.color);
-      pdf.setDrawColor(90,115,150); pdf.setFillColor(22,38,64); pdf.roundedRect(m, y, W-(m*2), 102, 16, 16, "FD");
-      pdf.setFillColor(cc.r,cc.g,cc.b); pdf.roundedRect(W-128, y+18, 70, 36, 12, 12, "F");
-      pdf.setTextColor(5,7,11); pdf.setFont("helvetica","bold"); pdf.setFontSize(14); pdf.text(`${eq.avg}`, W-104, y+42);
-      pdf.setTextColor(255,255,255); pdf.setFontSize(13); pdf.text(equipmentTitle(eq.latest), m+18, y+28);
-      pdf.setTextColor(210,218,230); pdf.setFontSize(10);
-      pdf.text(wrap(pdf, [eq.latest.brand, eq.latest.model, eq.latest.btu].filter(Boolean).join(" · ") || "Equipo sin datos completos", W-210), m+18, y+48);
-      pdf.text(`${eq.dx.label} · ${eq.items.length} visita(s) · Próxima: ${eq.latest.nextVisit || "Por coordinar"}`, m+18, y+70);
-      pdf.text(wrap(pdf, eq.dx.advice, W-160), m+18, y+88);
-      y += 116;
-    }
-    const fileName = `Oasis-Expediente-Equipos-${cleanFileName(latest.clientName || "cliente")}.pdf`;
-    const blob = pdf.output("blob");
-    const file = new File([blob], fileName, { type:"application/pdf" });
-    if (navigator.canShare && navigator.canShare({ files:[file] })) {
-      await navigator.share({ title:"Expediente de Equipos", text:"Diagnóstico de vida por equipo", files:[file] });
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),10000);
-  } catch (err) {
-    console.error(err);
-    alert("No se pudo generar el expediente de equipos: " + err.message);
-  }
 }
