@@ -204,7 +204,7 @@ function clientCard(c){
     <div class="card-actions">
       <button class="small-btn" data-action="view-client" data-id="${c.id}">Expediente</button>
       <button class="small-btn" data-action="diagnose-client" data-id="${c.id}">Diagnóstico</button>
-      <button class="small-btn" data-action="pdf-client" data-id="${c.id}">PDF Premium</button>
+      <button class="small-btn" data-action="pdf-client" data-id="${c.id}">PDF Técnico</button>
       <button class="small-btn" data-action="edit-client" data-id="${c.id}">Editar</button>
       <button class="danger-btn" data-action="delete-client" data-id="${c.id}">Borrar</button>
     </div>
@@ -498,7 +498,7 @@ async function generateClientPDF(id){
     pdf.setTextColor(255,255,255); pdf.setFontSize(28); pdf.text(title,m,92);
   }
 
-  bg("Expediente Premium HVAC");
+  bg("Expediente Técnico HVAC");
   let y = 130;
   pdf.setTextColor(255,255,255); pdf.setFontSize(18); pdf.text(c.name || "Cliente",m,y);
   pdf.setTextColor(210,218,230); pdf.setFontSize(10); pdf.text(`${c.phone||""} · ${c.address||""}`,m,y+18);
@@ -537,7 +537,7 @@ async function generateClientPDF(id){
   const blob = pdf.output("blob");
   const file = new File([blob],`Oasis-Expediente-${cleanFileName(c.name)}.pdf`,{type:"application/pdf"});
   if (navigator.canShare && navigator.canShare({files:[file]})){
-    await navigator.share({title:"Expediente HVAC",text:"Expediente técnico premium",files:[file]});
+    await navigator.share({title:"Expediente HVAC",text:"Expediente técnico HVAC",files:[file]});
     return;
   }
   const url = URL.createObjectURL(blob);
