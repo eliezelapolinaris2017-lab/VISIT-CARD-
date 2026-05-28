@@ -1,19 +1,55 @@
-# Oasis Visit Card — Life Cards V2
+# Oasis Visit Card Premium
 
-Cambio real de visual:
-- Historial ya no usa tarjetas simples.
-- Tarjeta principal tipo diagnóstico de vida.
-- Área del equipo como protagonista.
-- Serial opcional y fuera del enfoque visual.
-- Health score grande.
-- Diagnóstico visual por estado.
-- Acciones integradas.
+Reconstrucción completa.
 
+## Incluye
+- Firebase Auth con Google
+- Firestore
+- Storage
+- Dashboard premium
+- Clientes agrupados
+- Equipos por área
+- Diagnóstico guiado
+- Próxima visita automática 6 meses editable
+- Health Score
+- Expediente por cliente
+- PDF Premium compartible/descargable
+- Configuración de negocio
+
+## Subir a GitHub Pages
 Sube al root:
 - index.html
 - styles.css
 - app.js
 - manifest.json
 
-Importante:
-Después de subir, abre en ventana privada o cambia la URL agregando ?v=2 para evitar caché.
+## Reglas Firestore
+```js
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+## Reglas Storage
+```js
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+## Importante
+Después de subir, abre con:
+?premium=1
+
+Ejemplo:
+https://TUUSUARIO.github.io/oasis-visit-card/?premium=1
