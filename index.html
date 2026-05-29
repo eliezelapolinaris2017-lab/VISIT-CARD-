@@ -3,197 +3,195 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Oasis Visit Card Premium</title>
+  <title>Oasis Visit Card Enterprise</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#05070b" />
+  <meta name="theme-color" content="#070b12" />
 </head>
 <body>
-  <section id="authScreen" class="auth-screen">
-    <div class="auth-card">
-      <span class="brand-kicker">OASIS ONE</span>
-      <h1>Visit Card</h1>
-      <p>Expediente técnico HVAC por cliente, lugar y equipo.</p>
-      <button id="loginBtn" class="primary-btn">Entrar con Google</button>
+<section id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <span>OASIS ONE</span>
+    <h1>Visit Card Enterprise</h1>
+    <p>Expediente técnico HVAC por cliente, propiedad y equipo.</p>
+    <button id="loginBtn" class="primary-btn">Entrar con Google</button>
+  </div>
+</section>
+
+<main id="app" class="app hidden">
+  <header class="topbar">
+    <div>
+      <span class="kicker">OASIS ONE</span>
+      <h1>Visit Card Enterprise</h1>
     </div>
-  </section>
+    <div class="top-actions">
+      <button id="newClientBtn" class="ghost-btn">Nuevo cliente</button>
+      <button id="settingsBtn" class="ghost-btn">Config</button>
+      <button id="logoutBtn" class="ghost-btn">Salir</button>
+    </div>
+  </header>
 
-  <main id="app" class="app hidden">
-    <header class="app-header">
-      <div>
-        <span class="brand-kicker">OASIS ONE</span>
-        <h1>Visit Card</h1>
-      </div>
-      <div class="header-actions">
-        <button id="newClientBtn" class="ghost-btn">Nuevo cliente</button>
-        <button id="settingsBtn" class="ghost-btn">Config</button>
-        <button id="logoutBtn" class="ghost-btn">Salir</button>
-      </div>
-    </header>
+  <nav class="nav">
+    <button class="nav-btn active" data-page="homePage">Inicio</button>
+    <button class="nav-btn" data-page="searchPage">Buscar Cliente</button>
+    <button class="nav-btn" data-page="diagnosticPage">Diagnóstico</button>
+  </nav>
 
-    <section class="hero-grid">
-      <article class="hero-card">
+  <section id="homePage" class="page active">
+    <section class="executive-grid">
+      <article class="metric">
         <span>Clientes activos</span>
         <strong id="kpiClients">0</strong>
       </article>
-      <article class="hero-card">
+      <article class="metric">
         <span>Equipos registrados</span>
         <strong id="kpiEquipment">0</strong>
       </article>
-      <article class="hero-card">
-        <span>Health general</span>
-        <strong id="kpiHealth">—</strong>
+      <article class="metric">
+        <span>Servicios este mes</span>
+        <strong id="kpiMonth">0</strong>
       </article>
     </section>
 
-    <nav class="tabs">
-      <button class="tab active" data-page="dashboardPage">Dashboard</button>
-      <button class="tab" data-page="clientsPage">Clientes</button>
-      <button class="tab" data-page="equipmentPage">Equipos</button>
-      <button class="tab" data-page="diagnosticPage">Diagnóstico</button>
-    </nav>
-
-    <section id="dashboardPage" class="page active">
-      <div class="section-head">
-        <div>
-          <h2>Panel operativo</h2>
-          <p>Estado general de clientes, equipos y próximas visitas.</p>
+    <section class="home-layout">
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Agenda operativa</h2>
+          <p>Próximas visitas y seguimientos.</p>
         </div>
-      </div>
-      <div id="dashboardGrid" class="dashboard-grid"></div>
-    </section>
+        <div id="agendaList" class="compact-list"></div>
+      </article>
 
-    <section id="clientsPage" class="page">
-      <div class="section-head">
-        <div>
-          <h2>Clientes</h2>
-          <p>Expedientes agrupados por residencia o lugar.</p>
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Equipos en observación</h2>
+          <p>Atención preventiva o riesgo operativo.</p>
         </div>
-        <button class="primary-btn" id="clientQuickBtn">Añadir cliente</button>
-      </div>
-      <input id="clientSearch" class="search" placeholder="Buscar cliente, teléfono o dirección..." />
-      <div id="clientList" class="client-list"></div>
+        <div id="watchList" class="compact-list"></div>
+      </article>
     </section>
 
-    <section id="equipmentPage" class="page">
-      <div class="section-head">
-        <div>
-          <h2>Equipos</h2>
-          <p>Diagnóstico de vida por unidad: sala, master, oficina, recepción.</p>
-        </div>
-      </div>
-      <div id="equipmentBoard" class="equipment-board"></div>
+    <section class="quick-actions">
+      <button class="primary-btn" id="goSearchBtn">Buscar Cliente</button>
+      <button class="ghost-btn" id="goDiagnosticBtn">Nuevo Diagnóstico</button>
     </section>
+  </section>
 
-    <section id="diagnosticPage" class="page">
-      <div class="diagnostic-shell">
-        <aside class="diagnostic-side">
-          <span class="brand-kicker">NUEVO DIAGNÓSTICO</span>
-          <h2>Servicio técnico guiado</h2>
-          <p>Selecciona cliente y equipo. La próxima visita se calcula a 6 meses por defecto y puedes reducirla para comercios o alto uso.</p>
-        </aside>
-
-        <form id="diagnosticForm" class="diagnostic-form">
-          <input type="hidden" name="editingDiagnosticId" id="editingDiagnosticId" />
-
-          <div class="form-section">Cliente</div>
-          <select name="clientId" id="clientSelect" required></select>
-          <button type="button" class="ghost-btn inline-btn" id="openClientFromDiagnostic">Crear cliente</button>
-
-          <div class="form-section">Equipo</div>
-          <select name="equipmentId" id="equipmentSelect"></select>
-          <input name="area" placeholder="Área del equipo: Sala, Master, Oficina..." />
-          <input name="brand" placeholder="Marca" />
-          <input name="model" placeholder="Modelo" />
-          <input name="btu" placeholder="BTU" />
-          <input name="internalId" placeholder="ID interno opcional / serial si está visible" />
-
-          <div class="form-section">Servicio</div>
-          <select name="serviceType">
-            <option>Mantenimiento Preventivo</option>
-            <option>Mantenimiento Profundo</option>
-            <option>Diagnóstico</option>
-            <option>Reparación</option>
-            <option>Instalación</option>
-          </select>
-          <input name="technician" placeholder="Técnico" />
-
-          <div class="form-section">Próxima visita</div>
-          <select name="visitInterval" id="visitInterval">
-            <option value="6" selected>Residencial estándar — 6 meses</option>
-            <option value="3">Comercial / alto uso — 3 meses</option>
-            <option value="2">Alta demanda — 2 meses</option>
-            <option value="1">Seguimiento especial — 1 mes</option>
-            <option value="12">Anual — 12 meses</option>
-            <option value="custom">Fecha personalizada</option>
-          </select>
-          <input type="date" name="nextVisit" id="nextVisit" />
-          <input name="nextVisitReason" placeholder="Motivo del ajuste, si aplica" />
-
-          <div class="form-section">Estado del sistema</div>
-          <label>Enfriamiento <input type="range" name="cooling" min="0" max="100" value="85"></label>
-          <label>Presión <input type="range" name="pressure" min="0" max="100" value="85"></label>
-          <label>Drenaje <input type="range" name="drain" min="0" max="100" value="85"></label>
-          <label>Evaporador <input type="range" name="evaporator" min="0" max="100" value="85"></label>
-          <label>Condensador <input type="range" name="condenser" min="0" max="100" value="85"></label>
-
-          <div class="score-strip">
-            <span>Health Score</span>
-            <strong id="scorePreview">85</strong>
-          </div>
-
-          <div class="form-section">Evidencia</div>
-          <label class="file-drop">Fotos antes <input type="file" id="beforePhotos" accept="image/*" multiple></label>
-          <label class="file-drop">Fotos después <input type="file" id="afterPhotos" accept="image/*" multiple></label>
-
-          <textarea name="notes" placeholder="Observaciones técnicas"></textarea>
-          <textarea name="recommendations" placeholder="Recomendaciones"></textarea>
-
-          <div class="form-actions">
-            <button class="primary-btn" id="saveDiagnosticBtn" type="submit">Guardar diagnóstico</button>
-            <button class="ghost-btn hidden" id="cancelEditBtn" type="button">Cancelar edición</button>
-          </div>
-        </form>
-      </div>
-    </section>
-  </main>
-
-  <dialog id="clientDialog" class="dialog">
-    <form id="clientForm">
-      <input type="hidden" name="clientId" />
-      <h2>Cliente</h2>
-      <input name="name" placeholder="Nombre del cliente" required />
-      <input name="phone" placeholder="Teléfono / WhatsApp" />
-      <input name="address" placeholder="Dirección" />
-      <div class="dialog-actions">
-        <button type="button" class="ghost-btn close-dialog">Cerrar</button>
-        <button class="primary-btn" type="submit">Guardar</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="detailDialog" class="dialog detail-dialog">
-    <div id="detailContent"></div>
-    <div class="dialog-actions">
-      <button type="button" class="ghost-btn close-detail">Cerrar</button>
+  <section id="searchPage" class="page">
+    <div class="search-hero">
+      <span class="kicker">EXPEDIENTES</span>
+      <h2>Buscar cliente</h2>
+      <input id="searchInput" placeholder="Nombre, teléfono o dirección..." />
     </div>
-  </dialog>
+    <div id="searchResults" class="search-results"></div>
+  </section>
 
-  <dialog id="settingsDialog" class="dialog">
-    <form id="settingsForm">
-      <h2>Configuración</h2>
-      <input name="businessName" placeholder="Nombre del negocio" />
-      <input name="businessPhone" placeholder="Teléfono" />
-      <input name="businessEmail" placeholder="Email" />
-      <input name="businessAddress" placeholder="Dirección" />
-      <label class="file-drop">Logo <input type="file" id="logoFile" accept="image/*"></label>
-      <div class="dialog-actions">
-        <button type="button" class="ghost-btn close-settings">Cerrar</button>
-        <button class="primary-btn" type="submit">Guardar</button>
-      </div>
-    </form>
-  </dialog>
+  <section id="recordPage" class="page">
+    <div id="recordView"></div>
+  </section>
 
-  <script type="module" src="app.js"></script>
+  <section id="diagnosticPage" class="page">
+    <div class="diagnostic-layout">
+      <aside class="side-note">
+        <span class="kicker">SERVICIO</span>
+        <h2>Nuevo diagnóstico</h2>
+        <p>Registra el estado del equipo y genera historial técnico sin saturar la vista principal.</p>
+      </aside>
+
+      <form id="diagnosticForm" class="form-card">
+        <input type="hidden" id="editingDiagnosticId" name="editingDiagnosticId" />
+
+        <div class="form-title">Cliente</div>
+        <select id="clientSelect" name="clientId" required></select>
+        <button id="clientFromDiagBtn" type="button" class="ghost-btn span">Crear cliente</button>
+
+        <div class="form-title">Equipo</div>
+        <select id="equipmentSelect" name="equipmentId"></select>
+        <input name="area" placeholder="Área: Sala, Master, Oficina..." />
+        <input name="brand" placeholder="Marca" />
+        <input name="model" placeholder="Modelo" />
+        <input name="btu" placeholder="BTU" />
+        <input name="internalId" placeholder="ID interno opcional / serial si está visible" />
+
+        <div class="form-title">Servicio</div>
+        <select name="serviceType">
+          <option>Mantenimiento Preventivo</option>
+          <option>Mantenimiento Profundo</option>
+          <option>Diagnóstico</option>
+          <option>Reparación</option>
+          <option>Instalación</option>
+        </select>
+        <input name="technician" placeholder="Técnico" />
+
+        <div class="form-title">Próxima visita</div>
+        <select id="visitInterval" name="visitInterval">
+          <option value="6" selected>Residencial estándar — 6 meses</option>
+          <option value="3">Comercial / alto uso — 3 meses</option>
+          <option value="2">Alta demanda — 2 meses</option>
+          <option value="1">Seguimiento especial — 1 mes</option>
+          <option value="12">Anual — 12 meses</option>
+          <option value="custom">Fecha personalizada</option>
+        </select>
+        <input id="nextVisit" name="nextVisit" type="date" />
+        <input name="nextVisitReason" placeholder="Motivo del ajuste, si aplica" />
+
+        <div class="form-title">Estado del sistema</div>
+        <label>Enfriamiento <input name="cooling" type="range" min="0" max="100" value="85"></label>
+        <label>Presión <input name="pressure" type="range" min="0" max="100" value="85"></label>
+        <label>Drenaje <input name="drain" type="range" min="0" max="100" value="85"></label>
+        <label>Evaporador <input name="evaporator" type="range" min="0" max="100" value="85"></label>
+        <label>Condensador <input name="condenser" type="range" min="0" max="100" value="85"></label>
+
+        <div class="score-internal">
+          <span>Índice interno</span>
+          <strong id="scorePreview">85</strong>
+        </div>
+
+        <div class="form-title">Evidencia</div>
+        <label class="file-box">Fotos antes <input id="beforePhotos" type="file" accept="image/*" multiple></label>
+        <label class="file-box">Fotos después <input id="afterPhotos" type="file" accept="image/*" multiple></label>
+
+        <textarea name="notes" placeholder="Observaciones técnicas"></textarea>
+        <textarea name="recommendations" placeholder="Recomendaciones"></textarea>
+
+        <div class="form-actions span">
+          <button id="saveDiagnosticBtn" type="submit" class="primary-btn">Guardar diagnóstico</button>
+          <button id="cancelEditBtn" type="button" class="ghost-btn hidden">Cancelar edición</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<dialog id="clientDialog" class="dialog">
+  <form id="clientForm">
+    <input type="hidden" name="clientId" />
+    <h2>Cliente</h2>
+    <input name="name" placeholder="Nombre del cliente" required />
+    <input name="phone" placeholder="Teléfono / WhatsApp" />
+    <input name="address" placeholder="Dirección / propiedad" />
+    <div class="dialog-actions">
+      <button type="button" class="ghost-btn close-client">Cerrar</button>
+      <button class="primary-btn" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="settingsDialog" class="dialog">
+  <form id="settingsForm">
+    <h2>Configuración</h2>
+    <input name="businessName" placeholder="Nombre del negocio" />
+    <input name="businessPhone" placeholder="Teléfono" />
+    <input name="businessEmail" placeholder="Email" />
+    <input name="businessAddress" placeholder="Dirección" />
+    <label class="file-box">Logo <input id="logoFile" type="file" accept="image/*"></label>
+    <div class="dialog-actions">
+      <button type="button" class="ghost-btn close-settings">Cerrar</button>
+      <button class="primary-btn" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="app.js"></script>
 </body>
 </html>

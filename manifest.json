@@ -1,9 +1,9 @@
 {
-  "name": "Oasis Visit Card Premium",
+  "name": "Oasis Visit Card Enterprise",
   "short_name": "Visit Card",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#05070b",
-  "theme_color": "#05070b",
+  "background_color": "#070b12",
+  "theme_color": "#070b12",
   "icons": []
 }

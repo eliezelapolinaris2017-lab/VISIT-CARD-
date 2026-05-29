@@ -1,27 +1,23 @@
-# Oasis Visit Card Premium
+# Oasis Visit Card Enterprise
 
-Reconstrucción completa.
+Base reconstruida.
 
-## Incluye
-- Firebase Auth con Google
-- Firestore
-- Storage
-- Dashboard premium
-- Clientes agrupados
-- Equipos por área
-- Diagnóstico guiado
-- Próxima visita automática 6 meses editable
-- Health Score
-- Expediente por cliente
-- PDF Premium compartible/descargable
-- Configuración de negocio
+## Enfoque
+- Clientes ocultos por defecto.
+- Búsqueda para abrir expedientes.
+- Dashboard interno con agenda y observaciones.
+- Diagnóstico técnico separado.
+- PDF plano, blanco, elegante y corporativo.
 
-## Subir a GitHub Pages
+## Subir a GitHub
 Sube al root:
 - index.html
 - styles.css
 - app.js
 - manifest.json
+
+Abre con:
+?enterprise=1
 
 ## Reglas Firestore
 ```js
@@ -46,10 +42,3 @@ service firebase.storage {
   }
 }
 ```
-
-## Importante
-Después de subir, abre con:
-?premium=1
-
-Ejemplo:
-https://TUUSUARIO.github.io/oasis-visit-card/?premium=1
